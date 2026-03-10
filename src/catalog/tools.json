@@ -1,0 +1,393 @@
+[
+  {
+    "id": "supabase-mcp",
+    "name": "Supabase MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: supabase--mcp",
+    "url": "https://github.com/supabase-community/supabase-mcp",
+    "patterns": ["database"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop alt-tabbing to the Supabase dashboard. Your agent manages your entire database layer — migrations, queries, RLS policies, and auth.",
+    "meta": {
+      "stars": 1200,
+      "permissions": "Database read/write access",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "github-mcp",
+    "name": "GitHub MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @modelcontextprotocol/server-github",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/github",
+    "patterns": ["git", "ci-cd", "project-management"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Never leave your editor to manage PRs, issues, or check CI status. Your agent handles the entire GitHub workflow — creating branches, reviewing PRs, and managing releases.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "GitHub repo access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "linear-mcp",
+    "name": "Linear MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: linear-mcp",
+    "url": "https://github.com/linear/linear-mcp",
+    "patterns": ["project-management"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop context-switching to Linear to update tickets. Your agent creates issues, updates status, adds comments, and manages sprints — all from your editor.",
+    "meta": {
+      "stars": 800,
+      "permissions": "Linear workspace access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "postgres-mcp",
+    "name": "PostgreSQL MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @modelcontextprotocol/server-postgres",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
+    "patterns": ["database"],
+    "workflowOwnership": "high",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop copying SQL queries between your editor and psql. Your agent reads your schema, writes queries, and manages migrations directly.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "Database connection string",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "docker-mcp",
+    "name": "Docker MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @modelcontextprotocol/server-docker",
+    "url": "https://github.com/modelcontextprotocol/servers",
+    "patterns": ["docker"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop memorizing docker compose flags and debugging container networking. Your agent manages containers, builds images, and reads logs for you.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "Docker socket access",
+      "riskLevel": "high"
+    }
+  },
+  {
+    "id": "playwright-mcp",
+    "name": "Playwright MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @anthropic/mcp-playwright",
+    "url": "https://github.com/anthropics/mcp-playwright",
+    "patterns": ["browser", "testing"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop manually clicking through your app to verify changes. Your agent navigates, clicks, fills forms, and takes screenshots — turning manual QA into automated verification.",
+    "meta": {
+      "stars": 5000,
+      "permissions": "Browser automation",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "filesystem-mcp",
+    "name": "Filesystem MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @modelcontextprotocol/server-filesystem",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    "patterns": ["file-management"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop running find/cp/mv commands manually. Your agent handles bulk file operations, directory restructuring, and file organization with full path awareness.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "Filesystem read/write to specified dirs",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "asc-cli",
+    "name": "App Store Connect CLI",
+    "type": "cli",
+    "installCommand": "brew install app-store-connect-cli",
+    "url": "https://github.com/nicklama/app-store-connect-cli",
+    "patterns": ["ios", "deployment"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "med",
+    "sellTemplate": "Never open Xcode or App Store Connect again. Your agent handles TestFlight builds, release submissions, entitlements, and provisioning profiles — the entire iOS deployment pipeline that currently eats 30+ minutes of your day.",
+    "meta": {
+      "stars": 400,
+      "permissions": "App Store Connect API key",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "ios-simulator-mcp",
+    "name": "iOS Simulator MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: ios-simulator-mcp",
+    "url": "https://github.com/nicklama/ios-simulator-mcp",
+    "patterns": ["ios", "testing"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop manually launching the simulator, tapping through flows, and screenshotting. Your agent boots sims, navigates your app, and verifies UI — your personal QA tester.",
+    "meta": {
+      "stars": 300,
+      "permissions": "Xcode Simulator access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "vercel-mcp",
+    "name": "Vercel MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: vercel-mcp",
+    "url": "https://github.com/vercel/vercel-mcp",
+    "patterns": ["deployment", "cloud"],
+    "workflowOwnership": "high",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop switching to the Vercel dashboard for deployment status, environment variables, and domain config. Your agent deploys, rolls back, and manages your entire hosting setup.",
+    "meta": {
+      "stars": 600,
+      "permissions": "Vercel API token",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "aws-mcp",
+    "name": "AWS MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: aws-mcp-server",
+    "url": "https://github.com/aws/aws-mcp-servers",
+    "patterns": ["cloud", "deployment"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop memorizing AWS CLI flags and navigating the AWS Console maze. Your agent manages S3 buckets, Lambda functions, and IAM policies with full context of your infrastructure.",
+    "meta": {
+      "stars": 2000,
+      "permissions": "AWS credentials",
+      "riskLevel": "high"
+    }
+  },
+  {
+    "id": "sentry-mcp",
+    "name": "Sentry MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: sentry-mcp",
+    "url": "https://github.com/getsentry/sentry-mcp",
+    "patterns": ["monitoring"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop opening Sentry dashboards to triage errors. Your agent reads crash reports, identifies patterns, and can even start fixing the bugs that caused them.",
+    "meta": {
+      "stars": 500,
+      "permissions": "Sentry API token",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "slack-mcp",
+    "name": "Slack MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @anthropic/mcp-slack",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
+    "patterns": ["project-management"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop context-switching to Slack for status updates and team coordination. Your agent reads channels, sends messages, and keeps your team in the loop without you leaving your flow.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "Slack Bot token",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "todoist-mcp",
+    "name": "Todoist MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: todoist-mcp",
+    "url": "https://github.com/abhiz123/todoist-mcp-server",
+    "patterns": ["project-management"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop opening Todoist to track tasks your agent already knows about. It creates, completes, and organizes your todos based on what you're actually working on.",
+    "meta": {
+      "stars": 200,
+      "permissions": "Todoist API token",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "turborepo",
+    "name": "Turborepo",
+    "type": "package",
+    "installCommand": "npx create-turbo@latest",
+    "url": "https://github.com/vercel/turborepo",
+    "patterns": ["testing", "ci-cd"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop waiting for full rebuilds when only one package changed. Turborepo caches everything and only rebuilds what's needed — your agent runs faster, your CI bills shrink.",
+    "meta": {
+      "stars": 27000,
+      "permissions": "None",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "biome",
+    "name": "Biome",
+    "type": "package",
+    "installCommand": "npm install --save-dev @biomejs/biome",
+    "url": "https://github.com/biomejs/biome",
+    "patterns": ["testing", "file-management"],
+    "workflowOwnership": "low",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop configuring ESLint + Prettier separately and fighting config conflicts. Biome does formatting and linting in one tool, 35x faster.",
+    "meta": {
+      "stars": 17000,
+      "permissions": "None",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "gh-cli",
+    "name": "GitHub CLI (gh)",
+    "type": "cli",
+    "installCommand": "brew install gh",
+    "url": "https://github.com/cli/cli",
+    "patterns": ["git", "ci-cd", "project-management"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop opening GitHub in the browser for PRs and issues. gh CLI lets your agent create PRs, check CI, review code, and manage releases — all from the terminal.",
+    "meta": {
+      "stars": 38000,
+      "permissions": "GitHub OAuth",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "railway-cli",
+    "name": "Railway CLI",
+    "type": "cli",
+    "installCommand": "brew install railway",
+    "url": "https://github.com/railwayapp/cli",
+    "patterns": ["deployment", "cloud"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop context-switching to Railway's dashboard. Your agent deploys services, checks logs, and manages environment variables — push to deploy from your editor.",
+    "meta": {
+      "stars": 400,
+      "permissions": "Railway API token",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "k8s-mcp",
+    "name": "Kubernetes MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: kubernetes-mcp",
+    "url": "https://github.com/strowk/mcp-k8s-go",
+    "patterns": ["docker", "cloud", "deployment"],
+    "workflowOwnership": "med",
+    "painEliminated": "high",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop wrestling with kubectl and YAML manifests. Your agent manages pods, deployments, and services — debugs crashloops, scales replicas, and reads logs.",
+    "meta": {
+      "stars": 500,
+      "permissions": "Kubeconfig access",
+      "riskLevel": "high"
+    }
+  },
+  {
+    "id": "puppeteer-mcp",
+    "name": "Puppeteer MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @anthropic/mcp-puppeteer",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
+    "patterns": ["browser", "testing"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop manually testing web UIs and capturing screenshots. Your agent automates browser interactions, fills forms, and verifies rendered output.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "Browser automation",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "cloudflare-mcp",
+    "name": "Cloudflare MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: cloudflare-mcp",
+    "url": "https://github.com/cloudflare/mcp-server-cloudflare",
+    "patterns": ["cloud", "deployment"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop navigating the Cloudflare dashboard for Workers, DNS, and cache settings. Your agent manages your edge infrastructure directly.",
+    "meta": {
+      "stars": 1500,
+      "permissions": "Cloudflare API token",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "stripe-mcp",
+    "name": "Stripe MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: stripe-mcp",
+    "url": "https://github.com/stripe/agent-toolkit",
+    "patterns": ["api-requests"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop curling the Stripe API and navigating the dashboard for payment debugging. Your agent reads charges, manages subscriptions, and investigates failed payments.",
+    "meta": {
+      "stars": 3000,
+      "permissions": "Stripe API key",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "sqlite-mcp",
+    "name": "SQLite MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: @modelcontextprotocol/server-sqlite",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite",
+    "patterns": ["database"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop opening DB Browser for SQLite or running sqlite3 commands. Your agent queries, inspects, and manages your local databases inline.",
+    "meta": {
+      "stars": 15000,
+      "permissions": "SQLite file access",
+      "riskLevel": "low"
+    }
+  }
+]
