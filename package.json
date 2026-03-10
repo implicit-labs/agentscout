@@ -1,0 +1,42 @@
+{
+  "name": "agentscout",
+  "version": "0.1.0",
+  "description": "Your agents should shop for their own tools. Analyzes Claude Code sessions to find workflow inefficiencies and recommend tools.",
+  "type": "module",
+  "bin": {
+    "agentscout": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "ai-tools",
+    "agent",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "ink": "^6.0.0",
+    "ink-spinner": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0"
+  }
+}
