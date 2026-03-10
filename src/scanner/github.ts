@@ -7,7 +7,7 @@
 
 import { execSync } from "node:child_process";
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:os";
+import { join } from "node:path";
 
 export interface RepoMetadata {
   owner: string;
