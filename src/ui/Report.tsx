@@ -55,8 +55,8 @@ function AIRecommendationCard({
       </Text>
 
       <Text> </Text>
-      <ScoreBar label="Workflow Ownership" score={rec.workflowOwnership} />
-      <ScoreBar label="Pain Eliminated" score={rec.painEliminated} />
+      <ScoreBar label="Handoff Index" score={rec.workflowOwnership} />
+      <ScoreBar label="Time Reclaimed" score={rec.painEliminated} />
       <ScoreBar label="Agent Readiness" score={rec.agentReadiness} />
       <Text> </Text>
 

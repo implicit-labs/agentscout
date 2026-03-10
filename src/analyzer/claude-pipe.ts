@@ -38,49 +38,36 @@ function buildSessionSample(scanResult: ScanResult): string {
       project.assistantHandoffs.length > 0;
     if (!hasData) continue;
 
-    lines.push(`\n${"=".repeat(60)}`);
-    lines.push(`PROJECT: ${project.projectName} (${project.projectPath})`);
-    lines.push(`Sessions: ${project.sessionCount} | Tool calls: ${project.toolCalls.length} | Bash commands: ${project.bashCommands.length}`);
-    lines.push(`${"=".repeat(60)}`);
+    lines.push(`\n[${project.projectName}] (${project.sessionCount} sessions, ${project.toolCalls.length} tool calls)`);
 
-    // Bash commands for this project
-    if (project.bashCommands.length > 0) {
-      lines.push(`\n--- Bash Commands (${project.projectName}) ---`);
-      for (const cmd of project.bashCommands.slice(0, 25)) {
-        const truncated = cmd.length > 200 ? cmd.substring(0, 197) + "..." : cmd;
-        lines.push(`  $ ${truncated}`);
-      }
-    }
-
-    // User messages — what they're asking Claude to do
-    if (project.userMessages.length > 0) {
-      lines.push(`\n--- User Requests (${project.projectName}) ---`);
-      for (const msg of project.userMessages.slice(0, 10)) {
-        const truncated = msg.length > 250 ? msg.substring(0, 247) + "..." : msg;
-        lines.push(`  > ${truncated}`);
-      }
-    }
-
-    // CRITICAL: Where Claude tells the user to do something manually
+    // CRITICAL FIRST: Where Claude tells the user to do something manually
     if (project.assistantHandoffs.length > 0) {
-      lines.push(`\n--- Claude Handoffs to Human (${project.projectName}) ---`);
-      lines.push(`  [These are moments where Claude admitted it can't do something and told the user to do it manually]`);
-      for (const handoff of project.assistantHandoffs.slice(0, 15)) {
-        const truncated = handoff.length > 250 ? handoff.substring(0, 247) + "..." : handoff;
-        lines.push(`  ! ${truncated}`);
+      lines.push(`  HANDOFFS (Claude told user to do manually):`);
+      for (const handoff of project.assistantHandoffs.slice(0, 5)) {
+        const truncated = handoff.length > 150 ? handoff.substring(0, 147) + "..." : handoff;
+        lines.push(`    ! ${truncated}`);
       }
     }
 
-    // Tool call frequency for this project
-    const toolFreq = new Map<string, number>();
-    for (const call of project.toolCalls) {
-      toolFreq.set(call.name, (toolFreq.get(call.name) || 0) + 1);
+    // Top bash commands (deduplicated by prefix to reduce noise)
+    if (project.bashCommands.length > 0) {
+      const cmdPrefixes = new Map<string, number>();
+      for (const cmd of project.bashCommands) {
+        const prefix = cmd.split(/\s+/).slice(0, 3).join(" ");
+        cmdPrefixes.set(prefix, (cmdPrefixes.get(prefix) || 0) + 1);
+      }
+      const topCmds = [...cmdPrefixes.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+      lines.push(`  Top commands: ${topCmds.map(([c, n]) => `${c} (${n}x)`).join(", ")}`);
     }
-    if (toolFreq.size > 0) {
-      lines.push(`\n--- Tool Usage (${project.projectName}) ---`);
-      const sorted = [...toolFreq.entries()].sort((a, b) => b[1] - a[1]);
-      for (const [name, count] of sorted.slice(0, 10)) {
-        lines.push(`  ${name}: ${count}x`);
+
+    // Key user messages (first 3, short)
+    if (project.userMessages.length > 0) {
+      lines.push(`  User asks:`);
+      for (const msg of project.userMessages.slice(0, 3)) {
+        const truncated = msg.length > 120 ? msg.substring(0, 117) + "..." : msg;
+        lines.push(`    > ${truncated}`);
       }
     }
   }
@@ -142,9 +129,9 @@ RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
       "type": "mcp|cli|package",
       "installCommand": "how to install",
       "url": "github or docs url",
-      "workflowOwnership": "low|med|high",
-      "painEliminated": "low|med|high",
-      "agentReadiness": "low|med|high",
+      "workflowOwnership": "low|med|high (Handoff Index: how much the agent can do without human intervention)",
+      "painEliminated": "low|med|high (Time Reclaimed: how much time and frustration is saved)",
+      "agentReadiness": "low|med|high (Agent Readiness: trust, reliability, maturity of the tool)",
       "sellDescription": "2-sentence description referencing THIS developer's SPECIFIC projects and pain",
       "evidence": "The specific commands/handoffs/patterns from their sessions, with project names",
       "projects": ["project-name-1", "project-name-2"],
@@ -170,20 +157,26 @@ export async function analyzeWithClaude(
   scanResult: ScanResult,
   installedTools: InstalledTool[]
 ): Promise<AIAnalysisResult | null> {
+  console.error("[agentscout] Checking if claude CLI is available...");
   if (!isClaudeAvailable()) {
+    console.error("[agentscout] claude CLI not found in PATH, falling back to regex");
     return null;
   }
+  console.error("[agentscout] claude CLI found, building prompt...");
 
   const sessionSample = buildSessionSample(scanResult);
   const prompt = buildPrompt(sessionSample, installedTools, scanResult);
+  console.error(`[agentscout] Prompt built: ${prompt.length} chars`);
 
   // Write prompt to temp file to avoid shell escaping issues
   const tmpFile = join(tmpdir(), `agentscout-prompt-${Date.now()}.txt`);
   writeFileSync(tmpFile, prompt, "utf-8");
+  console.error(`[agentscout] Prompt written to ${tmpFile}`);
 
   try {
     const result = await new Promise<string>((resolve, reject) => {
       const chunks: string[] = [];
+      let settled = false;
       // Unset CLAUDECODE to allow nested sessions when running from within Claude Code
       const env = { ...process.env };
       delete env.CLAUDECODE;
@@ -200,23 +193,33 @@ export async function analyzeWithClaude(
         // ignore stderr
       });
 
+      // close is the ONLY place we resolve — it fires after all data is flushed
       proc.on("close", (code) => {
-        if (code === 0) {
-          resolve(chunks.join(""));
+        if (settled) return;
+        settled = true;
+        const output = chunks.join("");
+        console.error(`[agentscout] claude exited code=${code}, output=${output.length} chars`);
+        if (output.length > 0) {
+          resolve(output);
         } else {
-          reject(new Error(`claude exited with code ${code}`));
+          reject(new Error(`claude exited with code ${code} and no output`));
         }
       });
 
       proc.on("error", (err) => {
+        if (settled) return;
+        settled = true;
         reject(err);
       });
 
-      // Timeout after 3 minutes
+      // Timeout: kill the process, let the close handler resolve with buffered output
       setTimeout(() => {
-        proc.kill();
-        reject(new Error("claude analysis timed out"));
-      }, 180_000);
+        if (!settled) {
+          console.error(`[agentscout] timeout reached, killing process...`);
+          proc.kill();
+          // close handler will fire and resolve with whatever was buffered
+        }
+      }, 240_000);
     });
 
     // Parse response
@@ -231,9 +234,14 @@ export async function analyzeWithClaude(
       content = result;
     }
 
+    // Write debug output
+    const debugFile = join(tmpdir(), "agentscout-debug.txt");
+    writeFileSync(debugFile, `=== RAW RESULT (${result.length} chars) ===\n${result.substring(0, 2000)}\n\n=== EXTRACTED CONTENT (${content.length} chars) ===\n${content.substring(0, 2000)}\n`, "utf-8");
+
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*"insights"[\s\S]*"recommendations"[\s\S]*\}/);
     if (!jsonMatch) {
+      writeFileSync(debugFile, `\n=== NO JSON MATCH FOUND ===\nFull content:\n${content}\n`, { flag: "a" });
       return null;
     }
 
@@ -244,7 +252,10 @@ export async function analyzeWithClaude(
     }
 
     return parsed;
-  } catch {
+  } catch (err) {
+    console.error(`[agentscout] ERROR: ${err instanceof Error ? err.message : String(err)}`);
+    const debugFile = join(tmpdir(), "agentscout-debug.txt");
+    writeFileSync(debugFile, `=== ERROR ===\n${err instanceof Error ? err.message : String(err)}\n${err instanceof Error ? err.stack : ""}\n`, "utf-8");
     return null;
   } finally {
     try {
