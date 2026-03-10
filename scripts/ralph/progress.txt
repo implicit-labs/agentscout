@@ -1,0 +1,6 @@
+# Ralph Progress Log
+Feature: AgentScout CLI
+Branch: feat/agentscout-cli
+Verify Mode: basic (build/typecheck)
+
+## Progress
