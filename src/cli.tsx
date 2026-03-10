@@ -13,6 +13,10 @@ import {
   discoverInstalledTools,
   type InstalledTool,
 } from "./scanner/installed.js";
+import {
+  detectWorkflowSignals,
+  type WorkflowSignal,
+} from "./scanner/signals.js";
 import type { ScanResult } from "./scanner/sessions.js";
 import type { DetectedPattern } from "./scanner/patterns.js";
 import type { ToolRecommendation } from "./analyzer/matcher.js";
@@ -35,6 +39,7 @@ function App() {
   const [aiRecommendations, setAiRecommendations] = useState<
     AIRecommendation[]
   >([]);
+  const [signals, setSignals] = useState<WorkflowSignal[]>([]);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
@@ -61,9 +66,19 @@ function App() {
         const detected = detectPatterns(scan);
         setPatterns(detected);
 
+        // Detect workflow signals (frustration, retry loops, yoyo files, etc.)
+        const sessionSignalData = scan.projects.map((p) => ({
+          toolUses: p.rawToolUses,
+          userMessages: p.parsedUserMessages,
+          projectName: p.projectName,
+        }));
+        const detectedSignals = detectWorkflowSignals(sessionSignalData);
+        setSignals(detectedSignals);
+        console.error(`[agentscout] Detected ${detectedSignals.length} workflow signals`);
+
         // Phase 2: AI analysis (the real deal)
         setPhase("analyzing");
-        const aiResult = await analyzeWithClaude(scan, installed);
+        const aiResult = await analyzeWithClaude(scan, installed, detectedSignals);
 
         if (aiResult) {
           // AI analysis succeeded — use it
@@ -105,6 +120,7 @@ function App() {
         scanResult={scanResult}
         patterns={patterns}
         installedTools={installedTools}
+        signals={signals}
         aiInsights={aiInsights.length > 0 ? aiInsights : undefined}
         aiRecommendations={
           aiRecommendations.length > 0 ? aiRecommendations : undefined

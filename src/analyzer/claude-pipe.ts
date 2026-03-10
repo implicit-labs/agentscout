@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ScanResult } from "../scanner/sessions.js";
 import type { InstalledTool } from "../scanner/installed.js";
+import type { WorkflowSignal } from "../scanner/signals.js";
 import toolsCatalog from "../catalog/tools.json" with { type: "json" };
 
 export type ScoreLevel = "low" | "med" | "high";
@@ -75,10 +76,46 @@ function buildSessionSample(scanResult: ScanResult): string {
   return lines.join("\n");
 }
 
+function buildSignalsSummary(signals: WorkflowSignal[]): string {
+  if (signals.length === 0) return "";
+
+  const lines: string[] = ["\n=== WORKFLOW PAIN SIGNALS (detected automatically) ==="];
+  const byType = new Map<string, WorkflowSignal[]>();
+
+  for (const s of signals) {
+    const existing = byType.get(s.type) || [];
+    existing.push(s);
+    byType.set(s.type, existing);
+  }
+
+  const typeLabels: Record<string, string> = {
+    frustration: "USER FRUSTRATION (user got angry/impatient)",
+    "retry-loop": "RETRY LOOPS (agent stuck, same tool called 3+ times)",
+    "yoyo-file": "YOYO FILES (same file edited back-and-forth — indecision/bugs)",
+    "tool-error": "TOOL FAILURES (tools returning errors)",
+    "repeated-command": "REPEATED COMMANDS (same bash command run 3+ times)",
+    interrupted: "INTERRUPTIONS (user hit Escape — agent going wrong direction)",
+    correction: "CORRECTIONS (user corrected Claude immediately after it acted)",
+  };
+
+  for (const [type, items] of byType) {
+    lines.push(`\n  ${typeLabels[type] || type}:`);
+    for (const item of items.slice(0, 5)) {
+      lines.push(`    [${item.severity.toUpperCase()}] ${item.project}: ${item.description}`);
+      if (item.evidence) {
+        lines.push(`      Evidence: ${item.evidence.substring(0, 120)}`);
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
 function buildPrompt(
   sessionSample: string,
   installedTools: InstalledTool[],
-  scanResult: ScanResult
+  scanResult: ScanResult,
+  signals: WorkflowSignal[]
 ): string {
   const installedList = installedTools
     .map(
@@ -94,11 +131,14 @@ function buildPrompt(
     )
     .join("\n");
 
+  const signalsSummary = buildSignalsSummary(signals);
+
   return `You are AgentScout. You analyze a developer's Claude Code session history to find where agents COULD own workflows but currently don't.
 
 REAL SESSION DATA from ${scanResult.totalProjects} projects, ${scanResult.totalSessions} sessions:
 
 ${sessionSample}
+${signalsSummary}
 
 === TOOLS ALREADY INSTALLED ===
 ${installedList || "None"}
@@ -110,18 +150,20 @@ YOUR ANALYSIS PRIORITIES (in order):
 
 1. **HANDOFFS are the #1 signal.** The "Claude Handoffs to Human" sections show where Claude literally told the user "you need to manually do X." Each one is a tool opportunity. A tool that handles that handoff means the agent can own that step end-to-end.
 
-2. **Project attribution is mandatory.** Every recommendation MUST list the specific projects it applies to. If a tool only helps one project, say so. If it helps 5 projects, list all 5. Do NOT recommend tools that have no evidence in any project.
+2. **WORKFLOW PAIN SIGNALS are the #2 signal.** The "WORKFLOW PAIN SIGNALS" section shows detected behavioral patterns — frustration, retry loops, yoyo files, tool errors, repeated commands, interruptions, and corrections. These reveal where the developer OR the agent is struggling. Each one points to a tool that could eliminate that pain. Reference the specific signal type and project in your recommendations.
 
-3. **Be specific about what gets automated.** Don't say "manages your database." Say "In project 'primitive', Claude repeatedly asked you to check Supabase RLS policies manually — with the Supabase MCP, the agent handles RLS, migrations, and schema changes directly."
+3. **Project attribution is mandatory.** Every recommendation MUST list the specific projects it applies to. If a tool only helps one project, say so. If it helps 5 projects, list all 5. Do NOT recommend tools that have no evidence in any project.
 
-4. **Call out gotchas and blockers.** If npm publish requires 2FA, say that and suggest workarounds (--otp flag, CI tokens). If a tool needs admin access, flag it. Don't just recommend — explain what it takes to actually make it work.
+4. **Be specific about what gets automated.** Don't say "manages your database." Say "In project 'primitive', Claude repeatedly asked you to check Supabase RLS policies manually — with the Supabase MCP, the agent handles RLS, migrations, and schema changes directly."
 
-5. **Only recommend what the data supports.** If you see zero Kubernetes or AWS usage, do NOT recommend K8s or AWS tools. Every recommendation must have real evidence from the session data.
+5. **Call out gotchas and blockers.** If npm publish requires 2FA, say that and suggest workarounds (--otp flag, CI tokens). If a tool needs admin access, flag it. Don't just recommend — explain what it takes to actually make it work.
+
+6. **Only recommend what the data supports.** If you see zero Kubernetes or AWS usage, do NOT recommend K8s or AWS tools. Every recommendation must have real evidence from the session data.
 
 RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
 {
   "insights": [
-    "Specific observation about a workflow pattern — reference the project and actual commands/handoffs"
+    "Specific observation about a workflow pattern — reference the project, actual commands/handoffs, and any pain signals detected"
   ],
   "recommendations": [
     {
@@ -132,8 +174,8 @@ RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
       "workflowOwnership": "low|med|high (Handoff Index: how much the agent can do without human intervention)",
       "painEliminated": "low|med|high (Time Reclaimed: how much time and frustration is saved)",
       "agentReadiness": "low|med|high (Agent Readiness: trust, reliability, maturity of the tool)",
-      "sellDescription": "2-sentence description referencing THIS developer's SPECIFIC projects and pain",
-      "evidence": "The specific commands/handoffs/patterns from their sessions, with project names",
+      "sellDescription": "2-sentence description referencing THIS developer's SPECIFIC projects and pain signals",
+      "evidence": "The specific commands/handoffs/pain signals from their sessions, with project names",
       "projects": ["project-name-1", "project-name-2"],
       "gotchas": "Known blockers, permission issues, 2FA requirements, or limitations. Empty string if none.",
       "alreadyInstalled": false
@@ -155,7 +197,8 @@ function isClaudeAvailable(): boolean {
 
 export async function analyzeWithClaude(
   scanResult: ScanResult,
-  installedTools: InstalledTool[]
+  installedTools: InstalledTool[],
+  signals: WorkflowSignal[] = []
 ): Promise<AIAnalysisResult | null> {
   console.error("[agentscout] Checking if claude CLI is available...");
   if (!isClaudeAvailable()) {
@@ -163,9 +206,10 @@ export async function analyzeWithClaude(
     return null;
   }
   console.error("[agentscout] claude CLI found, building prompt...");
+  console.error(`[agentscout] ${signals.length} workflow signals detected`);
 
   const sessionSample = buildSessionSample(scanResult);
-  const prompt = buildPrompt(sessionSample, installedTools, scanResult);
+  const prompt = buildPrompt(sessionSample, installedTools, scanResult, signals);
   console.error(`[agentscout] Prompt built: ${prompt.length} chars`);
 
   // Write prompt to temp file to avoid shell escaping issues

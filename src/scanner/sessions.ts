@@ -44,13 +44,30 @@ export interface SessionMessage {
   };
 }
 
+export interface RawToolUse {
+  name: string;
+  inputKey: string;
+  filePath?: string;
+  command?: string;
+  isError: boolean;
+  errorMessage?: string;
+  timestamp: string;
+}
+
+export interface UserMessage {
+  text: string;
+  isInterrupted: boolean;
+}
+
 export interface ProjectScan {
   projectPath: string;
   projectName: string;
   sessionCount: number;
   sessions: SessionEntry[];
   toolCalls: ToolCall[];
+  rawToolUses: RawToolUse[];
   userMessages: string[];
+  parsedUserMessages: UserMessage[];
   bashCommands: string[];
   assistantHandoffs: string[];
   errorCount: number;
@@ -107,24 +124,31 @@ async function parseJSONLFile(
   projectPath: string
 ): Promise<{
   toolCalls: ToolCall[];
+  rawToolUses: RawToolUse[];
   userMessages: string[];
+  parsedUserMessages: UserMessage[];
   bashCommands: string[];
   assistantHandoffs: string[];
   errorCount: number;
   totalTokens: number;
 }> {
   const toolCalls: ToolCall[] = [];
+  const rawToolUses: RawToolUse[] = [];
   const userMessages: string[] = [];
+  const parsedUserMessages: UserMessage[] = [];
   const bashCommands: string[] = [];
   const assistantHandoffs: string[] = [];
   let errorCount = 0;
   let totalTokens = 0;
 
+  // Track pending tool_use IDs so we can match them with tool_result errors
+  const pendingToolUses = new Map<string, RawToolUse>();
+
   try {
     const fileInfo = await stat(filePath);
     // Skip files larger than 100MB
     if (fileInfo.size > 100 * 1024 * 1024) {
-      return { toolCalls, userMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
+      return { toolCalls, rawToolUses, userMessages, parsedUserMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
     }
 
     const stream = createReadStream(filePath, { encoding: "utf-8" });
@@ -141,11 +165,43 @@ async function parseJSONLFile(
         const entry = JSON.parse(line);
 
         if (entry.type === "user" && entry.message?.content) {
-          const content =
-            typeof entry.message.content === "string"
-              ? entry.message.content
-              : JSON.stringify(entry.message.content);
-          userMessages.push(content);
+          const content = entry.message.content;
+
+          if (typeof content === "string") {
+            const isInterrupted = content === "[Request interrupted by user]";
+            userMessages.push(content);
+            parsedUserMessages.push({ text: content, isInterrupted });
+          } else if (Array.isArray(content)) {
+            // Process text blocks and tool_result blocks
+            for (const block of content) {
+              if (block.type === "text" && typeof block.text === "string") {
+                const isInterrupted = block.text === "[Request interrupted by user]";
+                userMessages.push(block.text);
+                parsedUserMessages.push({ text: block.text, isInterrupted });
+              }
+
+              // Tool results — check for errors
+              if (block.type === "tool_result") {
+                const toolUseId = block.tool_use_id;
+                const isError = !!block.is_error;
+                const pending = pendingToolUses.get(toolUseId);
+
+                if (pending && isError) {
+                  pending.isError = true;
+                  // Extract error message from content
+                  let errMsg = "";
+                  if (typeof block.content === "string") {
+                    errMsg = block.content;
+                  } else if (Array.isArray(block.content)) {
+                    errMsg = block.content
+                      .map((b: { text?: string }) => b.text || "")
+                      .join(" ");
+                  }
+                  pending.errorMessage = errMsg.substring(0, 200);
+                }
+              }
+            }
+          }
         }
 
         if (entry.type === "assistant" && entry.message?.content) {
@@ -155,21 +211,43 @@ async function parseJSONLFile(
 
           for (const block of contents) {
             if (block.type === "tool_use") {
+              const inp = block.input || {};
               const toolCall: ToolCall = {
                 name: block.name,
-                input: block.input || {},
+                input: inp,
                 timestamp: entry.timestamp || "",
                 sessionId,
                 projectPath,
               };
               toolCalls.push(toolCall);
 
-              // Extract Bash commands specifically
-              if (
-                block.name === "Bash" &&
-                typeof block.input?.command === "string"
+              // Build inputKey for dedup/retry detection
+              let inputKey = block.name;
+              if (block.name === "Bash" && typeof inp.command === "string") {
+                inputKey = `Bash:${inp.command.substring(0, 60)}`;
+                bashCommands.push(inp.command);
+              } else if (
+                (block.name === "Edit" || block.name === "Write" || block.name === "Read") &&
+                typeof inp.file_path === "string"
               ) {
-                bashCommands.push(block.input.command);
+                inputKey = `${block.name}:${inp.file_path}`;
+              } else if (block.name === "Grep" && typeof inp.pattern === "string") {
+                inputKey = `Grep:${inp.pattern}`;
+              }
+
+              const rawUse: RawToolUse = {
+                name: block.name,
+                inputKey,
+                filePath: typeof inp.file_path === "string" ? inp.file_path : undefined,
+                command: typeof inp.command === "string" ? inp.command : undefined,
+                isError: false,
+                timestamp: entry.timestamp || "",
+              };
+              rawToolUses.push(rawUse);
+
+              // Track by tool_use_id so we can match with tool_result
+              if (block.id) {
+                pendingToolUses.set(block.id, rawUse);
               }
             }
 
@@ -186,7 +264,6 @@ async function parseJSONLFile(
 
               for (const pattern of handoffPatterns) {
                 if (pattern.test(text)) {
-                  // Extract the relevant sentence (up to 200 chars around the match)
                   const match = text.match(pattern);
                   if (match && match.index !== undefined) {
                     const start = Math.max(0, match.index - 50);
@@ -215,7 +292,7 @@ async function parseJSONLFile(
     // File not readable, skip
   }
 
-  return { toolCalls, userMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
+  return { toolCalls, rawToolUses, userMessages, parsedUserMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
 }
 
 async function discoverJSONLFiles(
@@ -252,7 +329,9 @@ export async function scanSessions(
     const projectName = projectDir.replace(/-/g, "/").replace(/^\//, "");
 
     const allToolCalls: ToolCall[] = [];
+    const allRawToolUses: RawToolUse[] = [];
     const allUserMessages: string[] = [];
+    const allParsedUserMessages: UserMessage[] = [];
     const allBashCommands: string[] = [];
     const allHandoffs: string[] = [];
     let projectErrors = 0;
@@ -283,7 +362,9 @@ export async function scanSessions(
           projectName
         );
         allToolCalls.push(...result.toolCalls);
+        allRawToolUses.push(...result.rawToolUses);
         allUserMessages.push(...result.userMessages);
+        allParsedUserMessages.push(...result.parsedUserMessages);
         allBashCommands.push(...result.bashCommands);
         allHandoffs.push(...result.assistantHandoffs);
         projectErrors += result.errorCount;
@@ -317,7 +398,9 @@ export async function scanSessions(
           projectName
         );
         allToolCalls.push(...result.toolCalls);
+        allRawToolUses.push(...result.rawToolUses);
         allUserMessages.push(...result.userMessages);
+        allParsedUserMessages.push(...result.parsedUserMessages);
         allBashCommands.push(...result.bashCommands);
         allHandoffs.push(...result.assistantHandoffs);
         projectErrors += result.errorCount;
@@ -333,7 +416,9 @@ export async function scanSessions(
       sessionCount,
       sessions: indexSessions,
       toolCalls: allToolCalls,
+      rawToolUses: allRawToolUses,
       userMessages: allUserMessages,
+      parsedUserMessages: allParsedUserMessages,
       bashCommands: allBashCommands,
       assistantHandoffs: allHandoffs,
       errorCount: projectErrors,

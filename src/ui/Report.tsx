@@ -6,12 +6,14 @@ import type { AIRecommendation } from "../analyzer/claude-pipe.js";
 import type { DetectedPattern } from "../scanner/patterns.js";
 import type { ScanResult } from "../scanner/sessions.js";
 import type { InstalledTool } from "../scanner/installed.js";
+import type { WorkflowSignal } from "../scanner/signals.js";
 import { ScoreBar } from "./ScoreBar.js";
 
 interface ReportProps {
   scanResult: ScanResult;
   patterns: DetectedPattern[];
   installedTools: InstalledTool[];
+  signals?: WorkflowSignal[];
   // AI-powered analysis (preferred)
   aiInsights?: string[];
   aiRecommendations?: AIRecommendation[];
@@ -106,10 +108,31 @@ function AIRecommendationCard({
   );
 }
 
+const SIGNAL_ICONS: Record<string, { icon: string; color: string }> = {
+  frustration: { icon: "!", color: "red" },
+  "retry-loop": { icon: "~", color: "yellow" },
+  "yoyo-file": { icon: "<>", color: "yellow" },
+  "tool-error": { icon: "x", color: "red" },
+  "repeated-command": { icon: "#", color: "yellow" },
+  interrupted: { icon: "^C", color: "red" },
+  correction: { icon: "<<", color: "yellow" },
+};
+
+const SIGNAL_LABELS: Record<string, string> = {
+  frustration: "Frustration",
+  "retry-loop": "Retry Loop",
+  "yoyo-file": "Yoyo File",
+  "tool-error": "Tool Error",
+  "repeated-command": "Repeated Cmd",
+  interrupted: "Interrupted",
+  correction: "Correction",
+};
+
 export function Report({
   scanResult,
   patterns,
   installedTools,
+  signals,
   aiInsights,
   aiRecommendations,
   recommendations,
@@ -171,6 +194,37 @@ export function Report({
               </Text>
             </Text>
           ))}
+        </Box>
+      )}
+
+      {/* Workflow Pain Signals */}
+      {signals && signals.length > 0 && (
+        <Box flexDirection="column" marginBottom={1}>
+          <Text bold>
+            {"  "}Workflow Pain Signals:
+          </Text>
+          <Text dimColor>
+            {"  "}Behavioral patterns detected across your sessions
+          </Text>
+          <Text> </Text>
+          {signals.slice(0, 10).map((s, i) => {
+            const { icon, color } = SIGNAL_ICONS[s.type] || { icon: "?", color: "white" };
+            const label = SIGNAL_LABELS[s.type] || s.type;
+            const sevColor = s.severity === "high" ? "red" : s.severity === "med" ? "yellow" : "white";
+            return (
+              <Text key={i}>
+                {"  "}
+                <Text color={color}>{icon}</Text>
+                <Text> </Text>
+                <Text color={sevColor} bold={s.severity === "high"}>
+                  [{label}]
+                </Text>
+                <Text> </Text>
+                <Text dimColor>{s.project}:</Text>
+                <Text> {s.description}</Text>
+              </Text>
+            );
+          })}
         </Box>
       )}
 
