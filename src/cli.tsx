@@ -6,6 +6,10 @@ import { scanSessions } from "./scanner/sessions.js";
 import { detectPatterns } from "./scanner/patterns.js";
 import { matchToolsToPatterns } from "./analyzer/matcher.js";
 import { generateDescriptions } from "./analyzer/claude-pipe.js";
+import {
+  discoverInstalledTools,
+  type InstalledTool,
+} from "./scanner/installed.js";
 import type { ScanResult } from "./scanner/sessions.js";
 import type { DetectedPattern } from "./scanner/patterns.js";
 import type { ToolRecommendation } from "./analyzer/matcher.js";
@@ -25,15 +29,20 @@ function App() {
   const [recommendations, setRecommendations] = useState<
     ToolRecommendation[]
   >([]);
+  const [installedTools, setInstalledTools] = useState<InstalledTool[]>([]);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     async function run() {
       try {
-        // Phase 1: Scan sessions
+        // Phase 1: Scan sessions + discover installed tools in parallel
         setPhase("scanning");
-        const scan = await scanSessions();
+        const [scan, installed] = await Promise.all([
+          scanSessions(),
+          discoverInstalledTools(),
+        ]);
         setScanResult(scan);
+        setInstalledTools(installed);
 
         if (scan.totalProjects === 0) {
           setError(
@@ -48,15 +57,16 @@ function App() {
         const detected = detectPatterns(scan);
         setPatterns(detected);
 
-        // Phase 3: Match to tools
+        // Phase 3: Match to tools (with installed tool awareness)
         setPhase("matching");
-        const matched = matchToolsToPatterns(detected);
+        const matched = matchToolsToPatterns(detected, installed);
 
-        // Phase 4: Generate AI descriptions
-        if (matched.length > 0) {
+        // Phase 4: Generate AI descriptions (only for new recommendations)
+        const newRecs = matched.filter((r) => !r.alreadyInstalled);
+        if (newRecs.length > 0) {
           setPhase("describing");
           const descriptions = await generateDescriptions(
-            matched.slice(0, 10),
+            newRecs.slice(0, 10),
             detected
           );
 
@@ -100,6 +110,7 @@ function App() {
         scanResult={scanResult}
         patterns={patterns}
         recommendations={recommendations}
+        installedTools={installedTools}
       />
     );
   }

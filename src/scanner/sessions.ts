@@ -119,16 +119,21 @@ async function parseJSONLFile(
 
   try {
     const fileInfo = await stat(filePath);
-    // Skip files larger than 5MB for performance
-    if (fileInfo.size > 5 * 1024 * 1024) {
+    // Skip files larger than 100MB
+    if (fileInfo.size > 100 * 1024 * 1024) {
       return { toolCalls, userMessages, bashCommands, errorCount, totalTokens };
     }
 
     const stream = createReadStream(filePath, { encoding: "utf-8" });
     const rl = createInterface({ input: stream, crlfDelay: Infinity });
 
+    // Cap at 5000 lines per file to keep scan under ~30s total
+    let lineCount = 0;
+    const maxLines = 5000;
+
     for await (const line of rl) {
       if (!line.trim()) continue;
+      if (++lineCount > maxLines) break;
       try {
         const entry = JSON.parse(line);
 

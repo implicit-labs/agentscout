@@ -4,19 +4,31 @@ import { RecommendationCard } from "./RecommendationCard.js";
 import type { ToolRecommendation } from "../analyzer/matcher.js";
 import type { DetectedPattern } from "../scanner/patterns.js";
 import type { ScanResult } from "../scanner/sessions.js";
+import type { InstalledTool } from "../scanner/installed.js";
 
 interface ReportProps {
   scanResult: ScanResult;
   patterns: DetectedPattern[];
   recommendations: ToolRecommendation[];
+  installedTools: InstalledTool[];
 }
+
+const SOURCE_LABELS: Record<string, string> = {
+  "global-mcp": "global",
+  "project-mcp": "project",
+  permission: "permissions",
+  plugin: "plugin",
+};
 
 export function Report({
   scanResult,
   patterns,
   recommendations,
+  installedTools,
 }: ReportProps) {
-  const topRecs = recommendations.slice(0, 10);
+  const installed = recommendations.filter((r) => r.alreadyInstalled);
+  const newRecs = recommendations.filter((r) => !r.alreadyInstalled);
+  const topNewRecs = newRecs.slice(0, 10);
 
   return (
     <Box flexDirection="column">
@@ -51,6 +63,27 @@ export function Report({
         </Text>
       </Box>
 
+      {/* Current Toolbox */}
+      {installedTools.length > 0 && (
+        <Box flexDirection="column" marginBottom={1}>
+          <Text bold>
+            {"  "}Current Toolbox:
+          </Text>
+          {installedTools.map((t, i) => (
+            <Text key={`${t.name}-${i}`}>
+              {"  "}
+              <Text color="green">{"+"}</Text>
+              <Text> {t.name}</Text>
+              <Text dimColor>
+                {" "}
+                ({SOURCE_LABELS[t.source] || t.source}
+                {t.project ? `, ${t.project}` : ""})
+              </Text>
+            </Text>
+          ))}
+        </Box>
+      )}
+
       {/* Detected Patterns */}
       {patterns.length > 0 && (
         <Box flexDirection="column" marginBottom={1}>
@@ -79,17 +112,37 @@ export function Report({
       </Text>
       <Text> </Text>
 
-      {/* Recommendations */}
-      {topRecs.length > 0 ? (
-        <Box flexDirection="column">
+      {/* Already installed tools that match patterns */}
+      {installed.length > 0 && (
+        <Box flexDirection="column" marginBottom={1}>
           <Text bold>
-            {"  "}Recommendations
+            {"  "}Already Working For You
           </Text>
           <Text dimColor>
-            {"  "}Tools that let your agent own more of your workflow
+            {"  "}Tools you have that address detected patterns
           </Text>
           <Text> </Text>
-          {topRecs.map((rec, i) => (
+          {installed.map((rec, i) => (
+            <RecommendationCard
+              key={rec.id}
+              recommendation={rec}
+              rank={i + 1}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* New Recommendations */}
+      {topNewRecs.length > 0 ? (
+        <Box flexDirection="column">
+          <Text bold>
+            {"  "}New Recommendations
+          </Text>
+          <Text dimColor>
+            {"  "}Tools that would let your agent own more of your workflow
+          </Text>
+          <Text> </Text>
+          {topNewRecs.map((rec, i) => (
             <RecommendationCard
               key={rec.id}
               recommendation={rec}
@@ -102,12 +155,11 @@ export function Report({
           <Text>
             {"  "}
             <Text color="green">
-              No obvious inefficiencies found.
+              No new recommendations.
             </Text>
           </Text>
           <Text dimColor>
-            {"  "}Your agent workflow is already well-optimized, or you
-            have very few sessions to analyze.
+            {"  "}Your toolbox already covers your detected patterns.
           </Text>
         </Box>
       )}

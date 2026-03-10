@@ -14,6 +14,13 @@ const TYPE_LABELS: Record<string, string> = {
   package: "Package",
 };
 
+const SOURCE_LABELS: Record<string, string> = {
+  "global-mcp": "global",
+  "project-mcp": "project",
+  permission: "permissions",
+  plugin: "plugin",
+};
+
 export function RecommendationCard({
   recommendation: rec,
   rank,
@@ -22,16 +29,30 @@ export function RecommendationCard({
   const patterns = rec.matchedPatterns
     .map((p) => p.label)
     .join(", ");
+  const isInstalled = !!rec.alreadyInstalled;
 
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text>
         {"  "}
-        <Text bold color="cyan">
+        <Text bold color={isInstalled ? "green" : "cyan"}>
           #{rank}
         </Text>
         <Text bold> {rec.name}</Text>
         <Text dimColor> ({typeLabel})</Text>
+        {isInstalled && (
+          <Text color="green">
+            {" "}
+            [installed
+            {rec.alreadyInstalled!.source
+              ? ` via ${SOURCE_LABELS[rec.alreadyInstalled!.source] || rec.alreadyInstalled!.source}`
+              : ""}
+            {rec.alreadyInstalled!.project
+              ? ` in ${rec.alreadyInstalled!.project}`
+              : ""}
+            ]
+          </Text>
+        )}
       </Text>
 
       <Text> </Text>
@@ -68,11 +89,13 @@ export function RecommendationCard({
         </Text>
       )}
 
-      <Text>
-        {"  "}
-        <Text dimColor>Install: </Text>
-        <Text color="green">{rec.installCommand}</Text>
-      </Text>
+      {!isInstalled && (
+        <Text>
+          {"  "}
+          <Text dimColor>Install: </Text>
+          <Text color="green">{rec.installCommand}</Text>
+        </Text>
+      )}
 
       <Text dimColor>
         {"  "}

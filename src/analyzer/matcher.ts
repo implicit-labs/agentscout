@@ -1,4 +1,6 @@
 import type { DetectedPattern, PatternCategory } from "../scanner/patterns.js";
+import type { InstalledTool } from "../scanner/installed.js";
+import { isToolInstalled } from "../scanner/installed.js";
 import toolsCatalog from "../catalog/tools.json" with { type: "json" };
 
 export type ScoreLevel = "low" | "med" | "high";
@@ -15,6 +17,7 @@ export interface ToolRecommendation {
   sellDescription: string;
   matchedPatterns: DetectedPattern[];
   relevanceScore: number;
+  alreadyInstalled?: InstalledTool;
   meta: {
     stars: number;
     permissions: string;
@@ -73,7 +76,8 @@ function computeRelevanceScore(
 }
 
 export function matchToolsToPatterns(
-  patterns: DetectedPattern[]
+  patterns: DetectedPattern[],
+  installedTools: InstalledTool[] = []
 ): ToolRecommendation[] {
   const catalog = toolsCatalog as CatalogEntry[];
   const recommendations: ToolRecommendation[] = [];
@@ -107,6 +111,8 @@ export function matchToolsToPatterns(
       adjustedPain = "high";
     }
 
+    const installed = isToolInstalled(tool.id, tool.name, installedTools);
+
     recommendations.push({
       id: tool.id,
       name: tool.name,
@@ -119,6 +125,7 @@ export function matchToolsToPatterns(
       sellDescription: tool.sellTemplate,
       matchedPatterns,
       relevanceScore: computeRelevanceScore(tool, matchedPatterns),
+      alreadyInstalled: installed,
       meta: tool.meta,
     });
   }
