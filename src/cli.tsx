@@ -5,7 +5,10 @@ import { Report } from "./ui/Report.js";
 import { scanSessions } from "./scanner/sessions.js";
 import { detectPatterns } from "./scanner/patterns.js";
 import { matchToolsToPatterns } from "./analyzer/matcher.js";
-import { generateDescriptions } from "./analyzer/claude-pipe.js";
+import {
+  analyzeWithClaude,
+  type AIRecommendation,
+} from "./analyzer/claude-pipe.js";
 import {
   discoverInstalledTools,
   type InstalledTool,
@@ -16,9 +19,7 @@ import type { ToolRecommendation } from "./analyzer/matcher.js";
 
 type Phase =
   | "scanning"
-  | "detecting"
-  | "matching"
-  | "describing"
+  | "analyzing"
   | "done"
   | "error";
 
@@ -30,6 +31,10 @@ function App() {
     ToolRecommendation[]
   >([]);
   const [installedTools, setInstalledTools] = useState<InstalledTool[]>([]);
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<
+    AIRecommendation[]
+  >([]);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
@@ -52,34 +57,24 @@ function App() {
           return;
         }
 
-        // Phase 2: Detect patterns
-        setPhase("detecting");
+        // Detect patterns (needed for fallback + stats display)
         const detected = detectPatterns(scan);
         setPatterns(detected);
 
-        // Phase 3: Match to tools (with installed tool awareness)
-        setPhase("matching");
-        const matched = matchToolsToPatterns(detected, installed);
+        // Phase 2: AI analysis (the real deal)
+        setPhase("analyzing");
+        const aiResult = await analyzeWithClaude(scan, installed);
 
-        // Phase 4: Generate AI descriptions (only for new recommendations)
-        const newRecs = matched.filter((r) => !r.alreadyInstalled);
-        if (newRecs.length > 0) {
-          setPhase("describing");
-          const descriptions = await generateDescriptions(
-            newRecs.slice(0, 10),
-            detected
-          );
-
-          // Apply AI-generated descriptions where available
-          for (const rec of matched) {
-            const aiDesc = descriptions.get(rec.id);
-            if (aiDesc) {
-              rec.sellDescription = aiDesc;
-            }
-          }
+        if (aiResult) {
+          // AI analysis succeeded — use it
+          setAiInsights(aiResult.insights);
+          setAiRecommendations(aiResult.recommendations);
+        } else {
+          // Fallback to regex-based matching
+          const matched = matchToolsToPatterns(detected, installed);
+          setRecommendations(matched);
         }
 
-        setRecommendations(matched);
         setPhase("done");
       } catch (err) {
         setError(
@@ -109,17 +104,22 @@ function App() {
       <Report
         scanResult={scanResult}
         patterns={patterns}
-        recommendations={recommendations}
         installedTools={installedTools}
+        aiInsights={aiInsights.length > 0 ? aiInsights : undefined}
+        aiRecommendations={
+          aiRecommendations.length > 0 ? aiRecommendations : undefined
+        }
+        recommendations={
+          recommendations.length > 0 ? recommendations : undefined
+        }
       />
     );
   }
 
   const PHASE_LABELS: Record<string, string> = {
     scanning: "Scanning Claude Code sessions...",
-    detecting: "Identifying manual work patterns...",
-    matching: "Finding tools to automate your workflow...",
-    describing: "Crafting recommendations (via claude)...",
+    analyzing:
+      "Analyzing your workflow with Claude (this may take a minute)...",
   };
 
   return (

@@ -52,6 +52,7 @@ export interface ProjectScan {
   toolCalls: ToolCall[];
   userMessages: string[];
   bashCommands: string[];
+  assistantHandoffs: string[];
   errorCount: number;
   totalTokens: number;
 }
@@ -108,12 +109,14 @@ async function parseJSONLFile(
   toolCalls: ToolCall[];
   userMessages: string[];
   bashCommands: string[];
+  assistantHandoffs: string[];
   errorCount: number;
   totalTokens: number;
 }> {
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const bashCommands: string[] = [];
+  const assistantHandoffs: string[] = [];
   let errorCount = 0;
   let totalTokens = 0;
 
@@ -121,7 +124,7 @@ async function parseJSONLFile(
     const fileInfo = await stat(filePath);
     // Skip files larger than 100MB
     if (fileInfo.size > 100 * 1024 * 1024) {
-      return { toolCalls, userMessages, bashCommands, errorCount, totalTokens };
+      return { toolCalls, userMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
     }
 
     const stream = createReadStream(filePath, { encoding: "utf-8" });
@@ -169,6 +172,32 @@ async function parseJSONLFile(
                 bashCommands.push(block.input.command);
               }
             }
+
+            // Detect when Claude tells the user to do something manually
+            if (block.type === "text" && typeof block.text === "string") {
+              const text = block.text;
+              const handoffPatterns = [
+                /you(?:'ll| will| need to| should| can| must) (?:manually |now )?(?:go to|open|navigate to|visit|log into|sign into)/i,
+                /(?:open|go to|navigate to|visit) (?:the )?(xcode|app store connect|testflight|dashboard|console|browser|website|portal|admin|settings)/i,
+                /(?:manually |now )?(?:run|execute|type|enter|paste|copy) (?:this|the following|these) (?:command|step|instruction)/i,
+                /(?:you(?:'ll| will) need to|unfortunately.*(?:can't|cannot|unable)|i (?:can't|cannot) (?:do this|handle this|access))/i,
+                /(?:outside (?:of )?(?:this|the) (?:editor|terminal|session)|in your browser|on the website)/i,
+              ];
+
+              for (const pattern of handoffPatterns) {
+                if (pattern.test(text)) {
+                  // Extract the relevant sentence (up to 200 chars around the match)
+                  const match = text.match(pattern);
+                  if (match && match.index !== undefined) {
+                    const start = Math.max(0, match.index - 50);
+                    const end = Math.min(text.length, match.index + 200);
+                    const snippet = text.substring(start, end).replace(/\n/g, " ").trim();
+                    assistantHandoffs.push(snippet);
+                  }
+                  break;
+                }
+              }
+            }
           }
 
           // Token usage
@@ -186,7 +215,7 @@ async function parseJSONLFile(
     // File not readable, skip
   }
 
-  return { toolCalls, userMessages, bashCommands, errorCount, totalTokens };
+  return { toolCalls, userMessages, bashCommands, assistantHandoffs, errorCount, totalTokens };
 }
 
 async function discoverJSONLFiles(
@@ -225,12 +254,12 @@ export async function scanSessions(
     const allToolCalls: ToolCall[] = [];
     const allUserMessages: string[] = [];
     const allBashCommands: string[] = [];
+    const allHandoffs: string[] = [];
     let projectErrors = 0;
     let projectTokens = 0;
     let sessionCount = 0;
 
     if (indexSessions.length > 0) {
-      // Use index — scan most recent sessions
       const sessionsToScan = indexSessions
         .sort(
           (a, b) =>
@@ -256,15 +285,14 @@ export async function scanSessions(
         allToolCalls.push(...result.toolCalls);
         allUserMessages.push(...result.userMessages);
         allBashCommands.push(...result.bashCommands);
+        allHandoffs.push(...result.assistantHandoffs);
         projectErrors += result.errorCount;
         projectTokens += result.totalTokens;
       }
     } else {
-      // No index — discover JSONL files directly
       const jsonlFiles = await discoverJSONLFiles(projectDir);
       if (jsonlFiles.length === 0) continue;
 
-      // Sort by file modification time (newest first), scan up to limit
       const fileStats = await Promise.all(
         jsonlFiles.map(async (f) => {
           try {
@@ -291,12 +319,13 @@ export async function scanSessions(
         allToolCalls.push(...result.toolCalls);
         allUserMessages.push(...result.userMessages);
         allBashCommands.push(...result.bashCommands);
+        allHandoffs.push(...result.assistantHandoffs);
         projectErrors += result.errorCount;
         projectTokens += result.totalTokens;
       }
     }
 
-    if (allToolCalls.length === 0 && allBashCommands.length === 0) continue;
+    if (allToolCalls.length === 0 && allBashCommands.length === 0 && allHandoffs.length === 0) continue;
 
     projects.push({
       projectPath: projectName,
@@ -306,6 +335,7 @@ export async function scanSessions(
       toolCalls: allToolCalls,
       userMessages: allUserMessages,
       bashCommands: allBashCommands,
+      assistantHandoffs: allHandoffs,
       errorCount: projectErrors,
       totalTokens: projectTokens,
     });
