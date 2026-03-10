@@ -29,8 +29,65 @@ export interface AIAnalysisResult {
   recommendations: AIRecommendation[];
 }
 
-function buildSessionSample(scanResult: ScanResult): string {
+// Frustration patterns to identify painful user messages (not just any messages)
+const PAIN_PATTERNS = [
+  /\bstill not working\b/i,
+  /\bstill broken\b/i,
+  /\bsame (?:error|issue|problem|bug)\b/i,
+  /\bnot what i (?:asked|wanted|meant)\b/i,
+  /\bthat'?s (?:not |in)?correct\b/i,
+  /\bi (?:already|just) (?:told|said|asked)\b/i,
+  /\bwhy (?:is|does|did|are|isn't|doesn't|won't)\b/i,
+  /\bwrong\b/i,
+  /\bundo\b/i,
+  /\brevert\b/i,
+  /\bjust (?:do|make|fix)\b/i,
+  /\bcome on\b/i,
+  /!!+/,
+  /\bdon'?t do that\b/i,
+  /\bactually[,]?\s+(?:i want|let's|we should|don't)\b/i,
+  /\bnot (?:this|that|the)\b/i,
+];
+
+function isSkillContent(text: string): boolean {
+  return (
+    text.startsWith("Base directory for this skill:") ||
+    text.startsWith("# ") ||
+    text.startsWith("This session is being continued") ||
+    text.includes("SKILL.md") ||
+    text.length > 500
+  );
+}
+
+function extractPainfulMessages(userMessages: string[]): string[] {
+  const painful: string[] = [];
+  for (const msg of userMessages) {
+    if (isSkillContent(msg)) continue;
+    if (msg.length < 5) continue;
+    for (const pattern of PAIN_PATTERNS) {
+      if (pattern.test(msg)) {
+        const truncated = msg.length > 150 ? msg.substring(0, 147) + "..." : msg;
+        painful.push(truncated);
+        break;
+      }
+    }
+  }
+  return painful;
+}
+
+function buildProjectPainStories(
+  scanResult: ScanResult,
+  signals: WorkflowSignal[]
+): string {
   const lines: string[] = [];
+
+  // Index signals by project for quick lookup
+  const signalsByProject = new Map<string, WorkflowSignal[]>();
+  for (const s of signals) {
+    const existing = signalsByProject.get(s.project) || [];
+    existing.push(s);
+    signalsByProject.set(s.project, existing);
+  }
 
   for (const project of scanResult.projects) {
     const hasData =
@@ -39,18 +96,62 @@ function buildSessionSample(scanResult: ScanResult): string {
       project.assistantHandoffs.length > 0;
     if (!hasData) continue;
 
+    const projectSignals = signalsByProject.get(project.projectName) || [];
+    const painfulMsgs = extractPainfulMessages(project.userMessages);
+
     lines.push(`\n[${project.projectName}] (${project.sessionCount} sessions, ${project.toolCalls.length} tool calls)`);
 
-    // CRITICAL FIRST: Where Claude tells the user to do something manually
+    // 1. HANDOFFS — where Claude told the user to do it manually
     if (project.assistantHandoffs.length > 0) {
-      lines.push(`  HANDOFFS (Claude told user to do manually):`);
-      for (const handoff of project.assistantHandoffs.slice(0, 5)) {
+      lines.push(`  HANDOFFS (agent told user to do manually):`);
+      for (const handoff of project.assistantHandoffs.slice(0, 4)) {
         const truncated = handoff.length > 150 ? handoff.substring(0, 147) + "..." : handoff;
         lines.push(`    ! ${truncated}`);
       }
     }
 
-    // Top bash commands (deduplicated by prefix to reduce noise)
+    // 2. FRUSTRATED MOMENTS — actual user messages showing pain
+    if (painfulMsgs.length > 0) {
+      lines.push(`  FRUSTRATED USER (actual quotes):`);
+      for (const msg of painfulMsgs.slice(0, 4)) {
+        lines.push(`    > "${msg}"`);
+      }
+    }
+
+    // 3. YOYO FILES — files edited back-and-forth excessively
+    const yoyos = projectSignals.filter((s) => s.type === "yoyo-file");
+    if (yoyos.length > 0) {
+      lines.push(`  YOYO FILES (edited back-and-forth):`);
+      for (const y of yoyos.slice(0, 3)) {
+        lines.push(`    ~ ${y.description}`);
+      }
+    }
+
+    // 4. TOOL ERRORS — what kept failing
+    const errors = projectSignals.filter((s) => s.type === "tool-error");
+    if (errors.length > 0) {
+      lines.push(`  TOOL ERRORS:`);
+      for (const e of errors.slice(0, 3)) {
+        lines.push(`    x ${e.description}: ${e.evidence.substring(0, 100)}`);
+      }
+    }
+
+    // 5. REPEATED COMMANDS — automation candidates
+    const repeated = projectSignals.filter((s) => s.type === "repeated-command");
+    if (repeated.length > 0) {
+      lines.push(`  REPEATED COMMANDS (automation candidates):`);
+      for (const r of repeated.slice(0, 3)) {
+        lines.push(`    # ${r.description}`);
+      }
+    }
+
+    // 6. INTERRUPTIONS — agent going wrong direction
+    const interrupts = projectSignals.filter((s) => s.type === "interrupted");
+    if (interrupts.length > 0) {
+      lines.push(`  INTERRUPTIONS: ${interrupts[0].description}`);
+    }
+
+    // 7. Top commands (compact)
     if (project.bashCommands.length > 0) {
       const cmdPrefixes = new Map<string, number>();
       for (const cmd of project.bashCommands) {
@@ -59,52 +160,8 @@ function buildSessionSample(scanResult: ScanResult): string {
       }
       const topCmds = [...cmdPrefixes.entries()]
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
+        .slice(0, 5);
       lines.push(`  Top commands: ${topCmds.map(([c, n]) => `${c} (${n}x)`).join(", ")}`);
-    }
-
-    // Key user messages (first 3, short)
-    if (project.userMessages.length > 0) {
-      lines.push(`  User asks:`);
-      for (const msg of project.userMessages.slice(0, 3)) {
-        const truncated = msg.length > 120 ? msg.substring(0, 117) + "..." : msg;
-        lines.push(`    > ${truncated}`);
-      }
-    }
-  }
-
-  return lines.join("\n");
-}
-
-function buildSignalsSummary(signals: WorkflowSignal[]): string {
-  if (signals.length === 0) return "";
-
-  const lines: string[] = ["\n=== WORKFLOW PAIN SIGNALS (detected automatically) ==="];
-  const byType = new Map<string, WorkflowSignal[]>();
-
-  for (const s of signals) {
-    const existing = byType.get(s.type) || [];
-    existing.push(s);
-    byType.set(s.type, existing);
-  }
-
-  const typeLabels: Record<string, string> = {
-    frustration: "USER FRUSTRATION (user got angry/impatient)",
-    "retry-loop": "RETRY LOOPS (agent stuck, same tool called 3+ times)",
-    "yoyo-file": "YOYO FILES (same file edited back-and-forth — indecision/bugs)",
-    "tool-error": "TOOL FAILURES (tools returning errors)",
-    "repeated-command": "REPEATED COMMANDS (same bash command run 3+ times)",
-    interrupted: "INTERRUPTIONS (user hit Escape — agent going wrong direction)",
-    correction: "CORRECTIONS (user corrected Claude immediately after it acted)",
-  };
-
-  for (const [type, items] of byType) {
-    lines.push(`\n  ${typeLabels[type] || type}:`);
-    for (const item of items.slice(0, 5)) {
-      lines.push(`    [${item.severity.toUpperCase()}] ${item.project}: ${item.description}`);
-      if (item.evidence) {
-        lines.push(`      Evidence: ${item.evidence.substring(0, 120)}`);
-      }
     }
   }
 
@@ -112,10 +169,9 @@ function buildSignalsSummary(signals: WorkflowSignal[]): string {
 }
 
 function buildPrompt(
-  sessionSample: string,
+  painStories: string,
   installedTools: InstalledTool[],
-  scanResult: ScanResult,
-  signals: WorkflowSignal[]
+  scanResult: ScanResult
 ): string {
   const installedList = installedTools
     .map(
@@ -131,14 +187,19 @@ function buildPrompt(
     )
     .join("\n");
 
-  const signalsSummary = buildSignalsSummary(signals);
-
   return `You are AgentScout. You analyze a developer's Claude Code session history to find where agents COULD own workflows but currently don't.
 
-REAL SESSION DATA from ${scanResult.totalProjects} projects, ${scanResult.totalSessions} sessions:
+Below is REAL session data organized by project. Each project shows:
+- HANDOFFS: Where Claude told the user "you need to do this manually"
+- FRUSTRATED USER: Actual quotes showing anger, correction, or impatience
+- YOYO FILES: Files edited back-and-forth excessively (agent indecision)
+- TOOL ERRORS: What kept failing
+- REPEATED COMMANDS: Same command run 3+ times (automation candidates)
+- INTERRUPTIONS: User hit Escape because agent was going wrong direction
 
-${sessionSample}
-${signalsSummary}
+DATA from ${scanResult.totalProjects} projects, ${scanResult.totalSessions} sessions:
+
+${painStories}
 
 === TOOLS ALREADY INSTALLED ===
 ${installedList || "None"}
@@ -146,24 +207,24 @@ ${installedList || "None"}
 === KNOWN TOOL CATALOG (you may also suggest tools outside this list) ===
 ${catalogList}
 
-YOUR ANALYSIS PRIORITIES (in order):
+YOUR ANALYSIS RULES:
 
-1. **HANDOFFS are the #1 signal.** The "Claude Handoffs to Human" sections show where Claude literally told the user "you need to manually do X." Each one is a tool opportunity. A tool that handles that handoff means the agent can own that step end-to-end.
+1. **Use the ACTUAL quotes and examples.** Your sellDescription and evidence MUST reference the real user quotes, real file names, and real commands from the data above. Do NOT make generic descriptions. Quote the user's actual frustrated words when relevant.
 
-2. **WORKFLOW PAIN SIGNALS are the #2 signal.** The "WORKFLOW PAIN SIGNALS" section shows detected behavioral patterns — frustration, retry loops, yoyo files, tool errors, repeated commands, interruptions, and corrections. These reveal where the developer OR the agent is struggling. Each one points to a tool that could eliminate that pain. Reference the specific signal type and project in your recommendations.
+2. **Each recommendation = a specific pain story.** Example: "In 'primitive', you edited SwipeCardView.swift 50 times back-and-forth and said 'why is this still broken'. A Playwright/iOS Simulator verification step after each edit would catch regressions immediately instead of the yoyo cycle."
 
-3. **Project attribution is mandatory.** Every recommendation MUST list the specific projects it applies to. If a tool only helps one project, say so. If it helps 5 projects, list all 5. Do NOT recommend tools that have no evidence in any project.
+3. **Project attribution is mandatory.** Every recommendation MUST list specific projects. Do NOT recommend tools without evidence from a specific project.
 
-4. **Be specific about what gets automated.** Don't say "manages your database." Say "In project 'primitive', Claude repeatedly asked you to check Supabase RLS policies manually — with the Supabase MCP, the agent handles RLS, migrations, and schema changes directly."
+4. **Suggest compound solutions.** Don't just recommend a raw tool — suggest how to USE it. Example: "Install Supabase MCP, then create a 'supabase-sync' skill that wraps it for dev/prod environment switching. Gotcha: requires write permissions to fully hand off migrations."
 
-5. **Call out gotchas and blockers.** If npm publish requires 2FA, say that and suggest workarounds (--otp flag, CI tokens). If a tool needs admin access, flag it. Don't just recommend — explain what it takes to actually make it work.
+5. **Call out gotchas and blockers.** What will prevent the tool from actually working? 2FA? Permission escalation? Requires admin access? Be specific.
 
-6. **Only recommend what the data supports.** If you see zero Kubernetes or AWS usage, do NOT recommend K8s or AWS tools. Every recommendation must have real evidence from the session data.
+6. **Only recommend what the data supports.** Zero K8s/AWS usage = do NOT recommend K8s/AWS tools.
 
 RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
 {
   "insights": [
-    "Specific observation about a workflow pattern — reference the project, actual commands/handoffs, and any pain signals detected"
+    "A specific pain story from a specific project — quote the user, reference the file, cite the command"
   ],
   "recommendations": [
     {
@@ -171,13 +232,13 @@ RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
       "type": "mcp|cli|package",
       "installCommand": "how to install",
       "url": "github or docs url",
-      "workflowOwnership": "low|med|high (Handoff Index: how much the agent can do without human intervention)",
-      "painEliminated": "low|med|high (Time Reclaimed: how much time and frustration is saved)",
-      "agentReadiness": "low|med|high (Agent Readiness: trust, reliability, maturity of the tool)",
-      "sellDescription": "2-sentence description referencing THIS developer's SPECIFIC projects and pain signals",
-      "evidence": "The specific commands/handoffs/pain signals from their sessions, with project names",
+      "workflowOwnership": "low|med|high",
+      "painEliminated": "low|med|high",
+      "agentReadiness": "low|med|high",
+      "sellDescription": "2-sentence description that references THIS user's ACTUAL project, file names, and frustrated quotes from the data",
+      "evidence": "Quote the specific user messages, file names, commands, and handoffs that prove this recommendation. Include project name.",
       "projects": ["project-name-1", "project-name-2"],
-      "gotchas": "Known blockers, permission issues, 2FA requirements, or limitations. Empty string if none.",
+      "gotchas": "Known blockers. Suggest compound solution (tool + skill/wrapper). Empty string if none.",
       "alreadyInstalled": false
     }
   ]
@@ -208,8 +269,8 @@ export async function analyzeWithClaude(
   console.error("[agentscout] claude CLI found, building prompt...");
   console.error(`[agentscout] ${signals.length} workflow signals detected`);
 
-  const sessionSample = buildSessionSample(scanResult);
-  const prompt = buildPrompt(sessionSample, installedTools, scanResult, signals);
+  const painStories = buildProjectPainStories(scanResult, signals);
+  const prompt = buildPrompt(painStories, installedTools, scanResult);
   console.error(`[agentscout] Prompt built: ${prompt.length} chars`);
 
   // Write prompt to temp file to avoid shell escaping issues
