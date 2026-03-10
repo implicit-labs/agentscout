@@ -7,6 +7,10 @@ import type { DetectedPattern } from "../scanner/patterns.js";
 import type { ScanResult } from "../scanner/sessions.js";
 import type { InstalledTool } from "../scanner/installed.js";
 import type { WorkflowSignal } from "../scanner/signals.js";
+import type { RepoMetadata } from "../scanner/github.js";
+import type { ReadinessBreakdown } from "../analyzer/readiness.js";
+import { buildContactInfo } from "../utils/contact.js";
+import { parseGitHubUrl } from "../scanner/github.js";
 import { ScoreBar } from "./ScoreBar.js";
 
 interface ReportProps {
@@ -14,6 +18,8 @@ interface ReportProps {
   patterns: DetectedPattern[];
   installedTools: InstalledTool[];
   signals?: WorkflowSignal[];
+  githubData?: Map<string, RepoMetadata>;
+  readinessData?: Map<string, ReadinessBreakdown>;
   // AI-powered analysis (preferred)
   aiInsights?: string[];
   aiRecommendations?: AIRecommendation[];
@@ -28,12 +34,80 @@ const SOURCE_LABELS: Record<string, string> = {
   plugin: "plugin",
 };
 
+function TrustSignals({
+  readiness,
+  github,
+}: {
+  readiness?: ReadinessBreakdown;
+  github?: RepoMetadata;
+}) {
+  if (!readiness && !github) return null;
+
+  const parts: string[] = [];
+  if (readiness) {
+    for (const s of readiness.signals) {
+      parts.push(`${s.label}: ${s.value}`);
+    }
+  }
+
+  if (parts.length === 0) return null;
+
+  return (
+    <Text>
+      {"  "}
+      <Text dimColor>Trust: </Text>
+      <Text>
+        {parts.map((part, i) => {
+          const signal = readiness?.signals[i];
+          const color = signal?.sentiment === "positive" ? "green" : signal?.sentiment === "negative" ? "red" : undefined;
+          return (
+            <Text key={i}>
+              {i > 0 && <Text dimColor> | </Text>}
+              <Text color={color}>{part}</Text>
+            </Text>
+          );
+        })}
+      </Text>
+    </Text>
+  );
+}
+
+function ContactLine({
+  toolName,
+  toolUrl,
+  github,
+}: {
+  toolName: string;
+  toolUrl?: string;
+  github?: RepoMetadata;
+}) {
+  if (!github?.maintainer) return null;
+
+  const contact = buildContactInfo(toolName, toolUrl || "", github.maintainer);
+  const parts: string[] = [];
+  if (contact.twitter) parts.push(contact.twitter);
+  if (contact.email) parts.push(`mailto:${github.maintainer.email}`);
+  if (parts.length === 0) parts.push(contact.github);
+
+  return (
+    <Text>
+      {"  "}
+      <Text dimColor>Contact: </Text>
+      <Text color="blue">{parts[0]}</Text>
+    </Text>
+  );
+}
+
 function AIRecommendationCard({
   rec,
   rank,
+  readiness,
+  github,
 }: {
   rec: AIRecommendation;
   rank: number;
+  readiness?: ReadinessBreakdown;
+  github?: RepoMetadata;
 }) {
   const TYPE_LABELS: Record<string, string> = {
     mcp: "MCP Server",
@@ -59,7 +133,7 @@ function AIRecommendationCard({
       <Text> </Text>
       <ScoreBar label="Handoff Index" score={rec.workflowOwnership} />
       <ScoreBar label="Time Reclaimed" score={rec.painEliminated} />
-      <ScoreBar label="Agent Readiness" score={rec.agentReadiness} />
+      <ScoreBar label="Agent Readiness" score={readiness?.score || rec.agentReadiness} />
       <Text> </Text>
 
       <Text>
@@ -91,6 +165,9 @@ function AIRecommendationCard({
           <Text>{rec.gotchas}</Text>
         </Text>
       )}
+
+      <TrustSignals readiness={readiness} github={github} />
+      <ContactLine toolName={rec.name} toolUrl={rec.url} github={github} />
 
       {!rec.alreadyInstalled && (
         <Text>
@@ -133,11 +210,37 @@ export function Report({
   patterns,
   installedTools,
   signals,
+  githubData,
+  readinessData,
   aiInsights,
   aiRecommendations,
   recommendations,
 }: ReportProps) {
   const hasAI = aiRecommendations && aiRecommendations.length > 0;
+
+  // Build lookup: tool name → id for matching AI recs to GitHub data
+  const toolNameToId = new Map<string, string>();
+  if (githubData) {
+    // Import catalog at module level isn't possible in component, so build from githubData keys
+    for (const [id] of githubData) {
+      // We'll match by finding the tool name in the recommendation
+      toolNameToId.set(id, id);
+    }
+  }
+
+  function findToolData(recName: string): { github?: RepoMetadata; readiness?: ReadinessBreakdown } {
+    if (!githubData) return {};
+    // Try to match by checking if any catalog tool ID appears in the recommendation name
+    for (const [id, gh] of githubData) {
+      // Match by repo name or tool name similarity
+      const repoLower = gh.repo.toLowerCase();
+      const nameLower = recName.toLowerCase();
+      if (nameLower.includes(repoLower) || repoLower.includes(nameLower.replace(/\s+(mcp|cli|server)/gi, ""))) {
+        return { github: gh, readiness: readinessData?.get(id) };
+      }
+    }
+    return {};
+  }
 
   // Fallback separation for non-AI mode
   const installedRecs = recommendations?.filter((r) => r.alreadyInstalled) || [];
@@ -287,13 +390,18 @@ export function Report({
               <Text> </Text>
               {aiRecommendations
                 .filter((r) => r.alreadyInstalled)
-                .map((rec, i) => (
-                  <AIRecommendationCard
-                    key={`installed-${i}`}
-                    rec={rec}
-                    rank={i + 1}
-                  />
-                ))}
+                .map((rec, i) => {
+                  const { github, readiness } = findToolData(rec.name);
+                  return (
+                    <AIRecommendationCard
+                      key={`installed-${i}`}
+                      rec={rec}
+                      rank={i + 1}
+                      readiness={readiness}
+                      github={github}
+                    />
+                  );
+                })}
             </Box>
           )}
 
@@ -309,13 +417,18 @@ export function Report({
               <Text> </Text>
               {aiRecommendations
                 .filter((r) => !r.alreadyInstalled)
-                .map((rec, i) => (
-                  <AIRecommendationCard
-                    key={`new-${i}`}
-                    rec={rec}
-                    rank={i + 1}
-                  />
-                ))}
+                .map((rec, i) => {
+                  const { github, readiness } = findToolData(rec.name);
+                  return (
+                    <AIRecommendationCard
+                      key={`new-${i}`}
+                      rec={rec}
+                      rank={i + 1}
+                      readiness={readiness}
+                      github={github}
+                    />
+                  );
+                })}
             </Box>
           )}
         </Box>

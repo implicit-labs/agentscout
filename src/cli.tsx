@@ -17,6 +17,12 @@ import {
   detectWorkflowSignals,
   type WorkflowSignal,
 } from "./scanner/signals.js";
+import {
+  enrichWithGitHub,
+  type RepoMetadata,
+} from "./scanner/github.js";
+import { computeReadiness, type ReadinessBreakdown } from "./analyzer/readiness.js";
+import toolsCatalog from "./catalog/tools.json" with { type: "json" };
 import type { ScanResult } from "./scanner/sessions.js";
 import type { DetectedPattern } from "./scanner/patterns.js";
 import type { ToolRecommendation } from "./analyzer/matcher.js";
@@ -40,19 +46,31 @@ function App() {
     AIRecommendation[]
   >([]);
   const [signals, setSignals] = useState<WorkflowSignal[]>([]);
+  const [githubData, setGithubData] = useState<Map<string, RepoMetadata>>(new Map());
+  const [readinessData, setReadinessData] = useState<Map<string, ReadinessBreakdown>>(new Map());
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     async function run() {
       try {
-        // Phase 1: Scan sessions + discover installed tools in parallel
+        // Phase 1: Scan sessions + discover installed tools + GitHub metadata in parallel
         setPhase("scanning");
-        const [scan, installed] = await Promise.all([
+        const [scan, installed, github] = await Promise.all([
           scanSessions(),
           discoverInstalledTools(),
+          enrichWithGitHub(toolsCatalog.map((t) => ({ id: t.id, url: t.url }))),
         ]);
         setScanResult(scan);
         setInstalledTools(installed);
+        setGithubData(github);
+
+        // Compute readiness from combined signals
+        const readiness = new Map<string, ReadinessBreakdown>();
+        for (const tool of toolsCatalog) {
+          const ghMeta = github.get(tool.id);
+          readiness.set(tool.id, computeReadiness(tool.meta, ghMeta));
+        }
+        setReadinessData(readiness);
 
         if (scan.totalProjects === 0) {
           setError(
@@ -67,6 +85,14 @@ function App() {
         setPatterns(detected);
 
         // Detect workflow signals (frustration, retry loops, yoyo files, etc.)
+        let totalRawToolUses = 0;
+        let totalParsedMsgs = 0;
+        for (const p of scan.projects) {
+          totalRawToolUses += p.rawToolUses.length;
+          totalParsedMsgs += p.parsedUserMessages.length;
+        }
+        console.error(`[agentscout] Raw data: ${totalRawToolUses} tool uses, ${totalParsedMsgs} parsed messages`);
+
         const sessionSignalData = scan.projects.map((p) => ({
           toolUses: p.rawToolUses,
           userMessages: p.parsedUserMessages,
@@ -121,6 +147,8 @@ function App() {
         patterns={patterns}
         installedTools={installedTools}
         signals={signals}
+        githubData={githubData}
+        readinessData={readinessData}
         aiInsights={aiInsights.length > 0 ? aiInsights : undefined}
         aiRecommendations={
           aiRecommendations.length > 0 ? aiRecommendations : undefined
@@ -154,4 +182,5 @@ function App() {
   );
 }
 
+console.error("[agentscout] Starting CLI (build includes workflow signals)...");
 render(<App />);
