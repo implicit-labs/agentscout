@@ -26,10 +26,8 @@ export function RecommendationCard({
   rank,
 }: RecommendationCardProps) {
   const typeLabel = TYPE_LABELS[rec.type] || rec.type;
-  const patterns = rec.matchedPatterns
-    .map((p) => p.label)
-    .join(", ");
   const isInstalled = !!rec.alreadyInstalled;
+  const hasEvidence = rec.projectEvidence.length > 0;
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -69,11 +67,53 @@ export function RecommendationCard({
       </Text>
       <Text> </Text>
 
-      <Text>
-        {"  "}
-        <Text dimColor>Matched: </Text>
-        <Text>{patterns}</Text>
-      </Text>
+      {/* Domain-specific evidence — only show top 1 project with relevant signals */}
+      {hasEvidence && (
+        <Box flexDirection="column">
+          {rec.projectEvidence.slice(0, 1).map((pe, i) => (
+            <Box key={i} flexDirection="column">
+              <Text>
+                {"  "}
+                <Text dimColor>Evidence from </Text>
+                <Text color="magenta" bold>{pe.project}</Text>
+                <Text dimColor>:</Text>
+              </Text>
+              {pe.yoyoFiles.slice(0, 2).map((yf, j) => (
+                <Text key={`yf-${j}`}>
+                  {"    "}
+                  <Text color="yellow">{"<>"}</Text>
+                  <Text> {yf}</Text>
+                </Text>
+              ))}
+              {pe.repeatedCommands.slice(0, 2).map((rc, j) => (
+                <Text key={`rc-${j}`}>
+                  {"    "}
+                  <Text color="yellow">{"#"}</Text>
+                  <Text> {rc}</Text>
+                </Text>
+              ))}
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {/* Fallback: pattern labels when no specific evidence */}
+      {!hasEvidence && (
+        <Text>
+          {"  "}
+          <Text dimColor>Matched: </Text>
+          <Text>{rec.matchedPatterns.map((p) => p.label).join(", ")}</Text>
+        </Text>
+      )}
+
+      {/* Projects */}
+      {rec.projects.length > 0 && (
+        <Text>
+          {"  "}
+          <Text dimColor>Projects: </Text>
+          <Text color="magenta">{rec.projects.join(", ")}</Text>
+        </Text>
+      )}
 
       {rec.meta.stars > 0 && (
         <Text>

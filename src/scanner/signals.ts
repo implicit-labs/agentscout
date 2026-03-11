@@ -14,6 +14,7 @@ export interface WorkflowSignal {
     | "yoyo-file"
     | "tool-error"
     | "repeated-command"
+    | "port-juggling"
     | "interrupted"
     | "correction";
   severity: "low" | "med" | "high";
@@ -280,6 +281,90 @@ function detectRepeatedCommands(sessions: SessionSignalData[]): WorkflowSignal[]
   return signals;
 }
 
+// ── Localhost / Port Juggling Detector ──────────────────────────────────────
+// Detects repeated local preview churn: booting servers, chasing ports, killing stale processes.
+
+function detectPortJuggling(sessions: SessionSignalData[]): WorkflowSignal[] {
+  const signals: WorkflowSignal[] = [];
+
+  const localPreviewPattern =
+    /\b(localhost|127\.0\.0\.1|next dev|vite|vercel dev|vc dev|npm run dev|pnpm dev|yarn dev|bun run dev|open https?:\/\/(?:localhost|127\.0\.0\.1)|curl .*localhost)\b/i;
+  const cleanupPattern =
+    /\b(lsof\s+-i|pkill|killall|kill\s+-9|fuser)\b.*(?:\d{2,5}|node|vite|next)/i;
+  const conflictPattern =
+    /\b(EADDRINUSE|address already in use|port \d{2,5}.*in use)\b/i;
+
+  for (const session of sessions) {
+    const samples: string[] = [];
+    const uniquePorts = new Set<string>();
+    let localPreviewCount = 0;
+    let cleanupCount = 0;
+    let conflictCount = 0;
+
+    for (const tool of session.toolUses) {
+      const haystacks = [tool.command, tool.errorMessage].filter(
+        (value): value is string => typeof value === "string" && value.length > 0
+      );
+
+      for (const text of haystacks) {
+        const matchedLocalPreview = localPreviewPattern.test(text);
+        const matchedCleanup = cleanupPattern.test(text);
+        const matchedConflict = conflictPattern.test(text);
+
+        if (!matchedLocalPreview && !matchedCleanup && !matchedConflict) {
+          continue;
+        }
+
+        if (matchedLocalPreview) localPreviewCount++;
+        if (matchedCleanup) cleanupCount++;
+        if (matchedConflict) conflictCount++;
+
+        for (const match of text.matchAll(/(?:localhost|127\.0\.0\.1):(\d{2,5})/gi)) {
+          if (match[1]) uniquePorts.add(match[1]);
+        }
+        for (const match of text.matchAll(/(?:-i\s*:|\bport\s+)(\d{2,5})\b/gi)) {
+          if (match[1]) uniquePorts.add(match[1]);
+        }
+
+        if (samples.length < 4) {
+          samples.push(text.length > 90 ? text.substring(0, 87) + "..." : text);
+        }
+      }
+    }
+
+    const totalMatches = localPreviewCount + cleanupCount + conflictCount;
+    if (totalMatches < 4 && uniquePorts.size < 3 && conflictCount === 0) {
+      continue;
+    }
+
+    const severity =
+      conflictCount > 0 || uniquePorts.size >= 5 || totalMatches >= 12
+        ? "high"
+        : uniquePorts.size >= 3 || totalMatches >= 7
+          ? "med"
+          : "low";
+
+    const portSummary =
+      uniquePorts.size > 0
+        ? `${uniquePorts.size} ports (${[...uniquePorts].slice(0, 5).join(", ")})`
+        : "multiple local previews";
+
+    signals.push({
+      type: "port-juggling",
+      severity,
+      description:
+        `Local preview loop hit ${totalMatches} localhost/dev-server commands across ${portSummary}` +
+        (cleanupCount > 0 ? ` with ${cleanupCount} cleanup commands` : "") +
+        (conflictCount > 0 ? ` and ${conflictCount} port conflicts` : ""),
+      project: session.projectName,
+      evidence: samples.join(" | "),
+      count: totalMatches,
+    });
+  }
+
+  return signals;
+}
+
 // ── Correction Detector ──────────────────────────────────────
 // User immediately corrects Claude after an assistant response.
 // Looks for "no", "wrong", "that's not" right after assistant acted.
@@ -342,6 +427,7 @@ export function detectWorkflowSignals(
     ...detectYoyoFiles(sessions),
     ...detectToolErrors(sessions),
     ...detectRepeatedCommands(sessions),
+    ...detectPortJuggling(sessions),
     ...detectCorrections(sessions),
   ];
 

@@ -5,6 +5,7 @@ export type PatternCategory =
   | "database"
   | "deployment"
   | "api-requests"
+  | "local-development"
   | "file-management"
   | "testing"
   | "docker"
@@ -83,6 +84,20 @@ const PATTERN_RULES: PatternRule[] = [
       /\bwget\s+/,
       /\bhttpie\b/,
       /\bfetch\(/,
+    ],
+  },
+  {
+    category: "local-development",
+    label: "Localhost / Port Juggling",
+    description:
+      "Starting local dev servers, hopping across localhost URLs, and cleaning up port conflicts manually",
+    matchers: [
+      /\b(localhost|127\.0\.0\.1)(:\d+)?\b/i,
+      /\b(open|curl)\s+https?:\/\/(?:localhost|127\.0\.0\.1)/i,
+      /\b(next|vite|vercel|vc)\s+dev\b/i,
+      /\b(npm|pnpm|yarn|bun)\s+(run\s+)?dev\b/i,
+      /\b(lsof\s+-i|pkill|killall|kill\s+-9|fuser)\b.*(?:\d{2,5}|node|vite|next)/i,
+      /\b(EADDRINUSE|address already in use|port \d{2,5})\b/i,
     ],
   },
   {

@@ -238,6 +238,23 @@
     }
   },
   {
+    "id": "portless",
+    "name": "Portless",
+    "type": "cli",
+    "installCommand": "npm install -g portless",
+    "url": "https://github.com/vercel-labs/portless",
+    "patterns": ["local-development"],
+    "workflowOwnership": "med",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop chasing localhost:3000, 5173, and 8080 across parallel sessions. Portless gives each app a stable named local URL so you and your agent stop wasting time on port collisions, stale tabs, and dev-server cleanup.",
+    "meta": {
+      "stars": 4500,
+      "permissions": "Local dev server access",
+      "riskLevel": "low"
+    }
+  },
+  {
     "id": "turborepo",
     "name": "Turborepo",
     "type": "package",

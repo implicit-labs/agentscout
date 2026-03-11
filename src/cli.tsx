@@ -6,9 +6,12 @@ import { scanSessions } from "./scanner/sessions.js";
 import { detectPatterns } from "./scanner/patterns.js";
 import { matchToolsToPatterns } from "./analyzer/matcher.js";
 import {
-  analyzeWithClaude,
-  type AIRecommendation,
-} from "./analyzer/claude-pipe.js";
+  computeDiagnosis,
+  enhanceWithLLM,
+  type Diagnosis,
+  type LLMDiagnosisMeta,
+  type LLMDiagnosisResult,
+} from "./analyzer/diagnosis.js";
 import {
   discoverInstalledTools,
   type InstalledTool,
@@ -29,7 +32,7 @@ import type { ToolRecommendation } from "./analyzer/matcher.js";
 
 type Phase =
   | "scanning"
-  | "analyzing"
+  | "diagnosing"
   | "done"
   | "error";
 
@@ -41,19 +44,18 @@ function App() {
     ToolRecommendation[]
   >([]);
   const [installedTools, setInstalledTools] = useState<InstalledTool[]>([]);
-  const [aiInsights, setAiInsights] = useState<string[]>([]);
-  const [aiRecommendations, setAiRecommendations] = useState<
-    AIRecommendation[]
-  >([]);
   const [signals, setSignals] = useState<WorkflowSignal[]>([]);
   const [githubData, setGithubData] = useState<Map<string, RepoMetadata>>(new Map());
   const [readinessData, setReadinessData] = useState<Map<string, ReadinessBreakdown>>(new Map());
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [llmDiagnosis, setLlmDiagnosis] = useState<LLMDiagnosisResult | null>(null);
+  const [llmDiagnosisMeta, setLlmDiagnosisMeta] = useState<LLMDiagnosisMeta | null>(null);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     async function run() {
       try {
-        // Phase 1: Scan sessions + discover installed tools + GitHub metadata in parallel
+        // Phase 1: Scan sessions + discover installed tools + GitHub metadata
         setPhase("scanning");
         const [scan, installed, github] = await Promise.all([
           scanSessions(),
@@ -64,7 +66,7 @@ function App() {
         setInstalledTools(installed);
         setGithubData(github);
 
-        // Compute readiness from combined signals
+        // Compute readiness
         const readiness = new Map<string, ReadinessBreakdown>();
         for (const tool of toolsCatalog) {
           const ghMeta = github.get(tool.id);
@@ -80,11 +82,11 @@ function App() {
           return;
         }
 
-        // Detect patterns (needed for fallback + stats display)
+        // Detect patterns
         const detected = detectPatterns(scan);
         setPatterns(detected);
 
-        // Detect workflow signals (frustration, retry loops, yoyo files, etc.)
+        // Detect workflow signals
         let totalRawToolUses = 0;
         let totalParsedMsgs = 0;
         for (const p of scan.projects) {
@@ -102,19 +104,31 @@ function App() {
         setSignals(detectedSignals);
         console.error(`[agentscout] Detected ${detectedSignals.length} workflow signals`);
 
-        // Phase 2: AI analysis (the real deal)
-        setPhase("analyzing");
-        const aiResult = await analyzeWithClaude(scan, installed, detectedSignals);
+        // Phase 2: DIAGNOSIS (the main event)
+        setPhase("diagnosing");
 
-        if (aiResult) {
-          // AI analysis succeeded — use it
-          setAiInsights(aiResult.insights);
-          setAiRecommendations(aiResult.recommendations);
+        // Step A: Computational diagnosis (instant, always works)
+        const computedDiag = computeDiagnosis(scan, detectedSignals, installed);
+        setDiagnosis(computedDiag);
+        console.error(`[agentscout] Computed diagnosis: ${computedDiag.projects.length} projects, ${computedDiag.topProblems.length} ranked problems`);
+
+        // Step B: LLM-enhanced diagnosis (optional, ~1-2 min)
+        const llmRun = await enhanceWithLLM(scan, detectedSignals, computedDiag, installed);
+        setLlmDiagnosisMeta(llmRun.meta);
+        if (llmRun.result) {
+          setLlmDiagnosis(llmRun.result);
+          console.error(
+            `[agentscout] LLM diagnosis: ${llmRun.result.step5_ranked.length} ranked problems in ${(llmRun.meta.durationMs / 1000).toFixed(1)}s`
+          );
         } else {
-          // Fallback to regex-based matching
-          const matched = matchToolsToPatterns(detected, installed);
-          setRecommendations(matched);
+          console.error(
+            `[agentscout] LLM diagnosis unavailable (${llmRun.meta.status}), using computational diagnosis${llmRun.meta.error ? `: ${llmRun.meta.error}` : ""}`
+          );
         }
+
+        // Step C: Tool matching (regex-based, uses signals for evidence)
+        const matched = matchToolsToPatterns(detected, installed, detectedSignals, scan);
+        setRecommendations(matched);
 
         setPhase("done");
       } catch (err) {
@@ -140,7 +154,7 @@ function App() {
     );
   }
 
-  if (phase === "done" && scanResult) {
+  if (phase === "done" && scanResult && diagnosis) {
     return (
       <Report
         scanResult={scanResult}
@@ -149,10 +163,9 @@ function App() {
         signals={signals}
         githubData={githubData}
         readinessData={readinessData}
-        aiInsights={aiInsights.length > 0 ? aiInsights : undefined}
-        aiRecommendations={
-          aiRecommendations.length > 0 ? aiRecommendations : undefined
-        }
+        diagnosis={diagnosis}
+        llmDiagnosis={llmDiagnosis}
+        llmDiagnosisMeta={llmDiagnosisMeta}
         recommendations={
           recommendations.length > 0 ? recommendations : undefined
         }
@@ -162,8 +175,8 @@ function App() {
 
   const PHASE_LABELS: Record<string, string> = {
     scanning: "Scanning Claude Code sessions...",
-    analyzing:
-      "Analyzing your workflow with Claude (this may take a minute)...",
+    diagnosing:
+      "Diagnosing workflow breakdowns (this may take a minute)...",
   };
 
   return (
@@ -182,5 +195,6 @@ function App() {
   );
 }
 
-console.error("[agentscout] Starting CLI (build includes workflow signals)...");
+import pkg from "../package.json" with { type: "json" };
+console.error(`[agentscout] v${pkg.version} starting...`);
 render(<App />);

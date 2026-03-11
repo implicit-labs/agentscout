@@ -282,9 +282,10 @@ export async function analyzeWithClaude(
     const result = await new Promise<string>((resolve, reject) => {
       const chunks: string[] = [];
       let settled = false;
-      // Unset CLAUDECODE to allow nested sessions when running from within Claude Code
+      // Unset all Claude Code env vars to allow nested sessions
       const env = { ...process.env };
       delete env.CLAUDECODE;
+      delete env.CLAUDE_CODE_ENTRYPOINT;
       const proc = spawn("sh", ["-c", `cat "${tmpFile}" | claude -p --output-format json`], {
         stdio: ["ignore", "pipe", "pipe"],
         env,
