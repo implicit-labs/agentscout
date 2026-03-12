@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/cli.tsx"],
+  entry: ["src/cli.tsx", "src/analyzer/sdk-worker.ts"],
   format: ["esm"],
   target: "node18",
   outDir: "dist",

@@ -8,6 +8,8 @@ import { matchToolsToPatterns } from "./analyzer/matcher.js";
 import {
   computeDiagnosis,
   enhanceWithLLM,
+  buildDiagnosisData,
+  synthesizeFromExternalAnswers,
   type Diagnosis,
   type LLMDiagnosisMeta,
   type LLMDiagnosisResult,
@@ -16,6 +18,7 @@ import {
   discoverInstalledTools,
   type InstalledTool,
 } from "./scanner/installed.js";
+import { buildToolingInventory } from "./scanner/inventory.js";
 import {
   detectWorkflowSignals,
   type WorkflowSignal,
@@ -196,5 +199,71 @@ function App() {
 }
 
 import pkg from "../package.json" with { type: "json" };
-console.error(`[agentscout] v${pkg.version} starting...`);
-render(<App />);
+
+const args = process.argv.slice(2);
+
+if (args.includes("--inventory")) {
+  // Headless mode: output tooling inventory as JSON to stdout
+  (async () => {
+    console.error(`[agentscout] v${pkg.version} inventory mode`);
+    const inventory = await buildToolingInventory();
+    process.stdout.write(JSON.stringify(inventory, null, 2));
+  })().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+} else if (args.includes("--emit-prompts")) {
+  // Headless mode: run scan + heuristic diagnosis, output prompts as JSON to stdout
+  (async () => {
+    console.error(`[agentscout] v${pkg.version} emit-prompts mode`);
+    const [scan, installed] = await Promise.all([
+      scanSessions(),
+      discoverInstalledTools(),
+    ]);
+    if (scan.totalProjects === 0) {
+      console.error("[agentscout] No sessions found");
+      process.exit(1);
+    }
+    const sessionSignalData = scan.projects.map((p) => ({
+      toolUses: p.rawToolUses,
+      userMessages: p.parsedUserMessages,
+      projectName: p.projectName,
+    }));
+    const detectedSignals = detectWorkflowSignals(sessionSignalData);
+    const computedDiag = computeDiagnosis(scan, detectedSignals, installed);
+    const { briefs, prompts } = buildDiagnosisData(scan, detectedSignals, computedDiag, installed);
+    process.stdout.write(JSON.stringify({ briefs, prompts, projectCount: computedDiag.projects.length }, null, 2));
+  })().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+} else if (args.includes("--apply-answers")) {
+  // Headless mode: read answers from stdin, synthesize, output full report JSON
+  (async () => {
+    console.error(`[agentscout] v${pkg.version} apply-answers mode`);
+    const chunks: string[] = [];
+    process.stdin.setEncoding("utf8");
+    for await (const chunk of process.stdin) chunks.push(chunk);
+    const input = JSON.parse(chunks.join("")) as { answers: { project: string; json: unknown }[] };
+
+    const [scan, installed] = await Promise.all([
+      scanSessions(),
+      discoverInstalledTools(),
+    ]);
+    const sessionSignalData = scan.projects.map((p) => ({
+      toolUses: p.rawToolUses,
+      userMessages: p.parsedUserMessages,
+      projectName: p.projectName,
+    }));
+    const detectedSignals = detectWorkflowSignals(sessionSignalData);
+    const computedDiag = computeDiagnosis(scan, detectedSignals, installed);
+    const llmRun = synthesizeFromExternalAnswers(computedDiag, input.answers);
+    process.stdout.write(JSON.stringify(llmRun, null, 2));
+  })().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+} else {
+  console.error(`[agentscout] v${pkg.version} starting...`);
+  render(<App />);
+}
