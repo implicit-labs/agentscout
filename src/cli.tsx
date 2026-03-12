@@ -202,6 +202,18 @@ import pkg from "../package.json" with { type: "json" };
 
 const args = process.argv.slice(2);
 
+// Parse --project flag: --project=name or --project name
+function getProjectFilter(): string | undefined {
+  const eqIdx = args.findIndex((a) => a.startsWith("--project="));
+  if (eqIdx !== -1) return args[eqIdx].split("=")[1];
+  const flagIdx = args.indexOf("--project");
+  if (flagIdx !== -1 && flagIdx + 1 < args.length && !args[flagIdx + 1].startsWith("--")) {
+    return args[flagIdx + 1];
+  }
+  return undefined;
+}
+const projectFilter = getProjectFilter();
+
 if (args.includes("--inventory")) {
   // Headless mode: output tooling inventory as JSON to stdout
   (async () => {
@@ -215,9 +227,9 @@ if (args.includes("--inventory")) {
 } else if (args.includes("--emit-prompts")) {
   // Headless mode: run scan + heuristic diagnosis, output prompts as JSON to stdout
   (async () => {
-    console.error(`[agentscout] v${pkg.version} emit-prompts mode`);
+    console.error(`[agentscout] v${pkg.version} emit-prompts mode${projectFilter ? ` (project: ${projectFilter})` : ""}`);
     const [scan, installed] = await Promise.all([
-      scanSessions(),
+      scanSessions(10, projectFilter),
       discoverInstalledTools(),
     ]);
     if (scan.totalProjects === 0) {
@@ -247,7 +259,7 @@ if (args.includes("--inventory")) {
     const input = JSON.parse(chunks.join("")) as { answers: { project: string; json: unknown }[] };
 
     const [scan, installed] = await Promise.all([
-      scanSessions(),
+      scanSessions(10, projectFilter),
       discoverInstalledTools(),
     ]);
     const sessionSignalData = scan.projects.map((p) => ({

@@ -313,11 +313,29 @@ async function discoverJSONLFiles(
 }
 
 export async function scanSessions(
-  maxSessionsPerProject: number = 10
+  maxSessionsPerProject: number = 10,
+  projectFilter?: string
 ): Promise<ScanResult> {
   const startTime = Date.now();
 
-  const projectDirs = await discoverProjects();
+  let projectDirs = await discoverProjects();
+
+  // Filter to a single project if --project flag is used
+  if (projectFilter) {
+    const normalizedFilter = projectFilter.replace(/\//g, "-").replace(/^-/, "");
+    projectDirs = projectDirs.filter((dir) => {
+      // Match by: exact dir name, decoded path contains filter, or project short name
+      const decoded = dir.replace(/-/g, "/").replace(/^\//, "");
+      const shortName = decoded.split("/").pop() || "";
+      return (
+        dir === normalizedFilter ||
+        dir.includes(normalizedFilter) ||
+        decoded.includes(projectFilter) ||
+        shortName === projectFilter ||
+        shortName.includes(projectFilter)
+      );
+    });
+  }
   const projects: ProjectScan[] = [];
   let totalToolCalls = 0;
   let totalBashCommands = 0;

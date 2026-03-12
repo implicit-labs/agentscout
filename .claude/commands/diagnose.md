@@ -7,8 +7,15 @@
 Run both commands. These are deterministic scrapers — no LLM needed.
 
 **1a. Session data:**
+
+If the user specified a project (e.g., `/diagnose primitive`), pass `--project <name>` to scope to that project only. The filter matches by project short name, path substring, or directory name.
+
 ```bash
+# All projects (default):
 AGENTSCOUT_LLM_PROJECT_LIMIT=10 node dist/cli.js --emit-prompts 2>/dev/null
+
+# Single project (if user specified one):
+AGENTSCOUT_LLM_PROJECT_LIMIT=10 node dist/cli.js --emit-prompts --project <name> 2>/dev/null
 ```
 Save this output — you'll split it by project in Phase 2. It contains `briefs[]` with per-project: `rawUserMessages`, `rawBashCommands`, `rawToolErrors`, `rawAssistantHandoffs`, `heuristicFindings`, and `implicitSignals`.
 
