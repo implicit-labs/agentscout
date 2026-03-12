@@ -46,6 +46,33 @@ For each recommendation, score the **three pillars**:
 
 **IMPORTANT: Always use these exact pillar names in prose output.** Write `Handoff Index: high` not `Ownership: high`. Write `Time Reclaimed: high` not `Pain: high`. The three labels are: Handoff Index, Time Reclaimed, Agent Readiness.
 
+### Step 2b: Explore the catalog for proactive recommendations
+
+This step works in the OPPOSITE direction from Step 2. Instead of finding a fix for each problem, browse the catalog and find tools that match the user's tech stack and workflow — even if no diagnosis finding triggered them.
+
+**How to explore:**
+
+1. From the diagnosis answers, extract the user's tech stack: what languages, frameworks, platforms, and services do they use across projects? (e.g., iOS/Swift, React/Next.js, Supabase, Vercel, Linear)
+
+2. From the inventory, extract what they already have configured.
+
+3. Scan `catalog/potential-solutions.md` entry by entry. For each tool:
+   - Does it match the user's tech stack?
+   - Is it already installed? (check inventory — skip if so)
+   - Could it plausibly help based on the workflow patterns seen? (e.g., if they do iOS work, Maestro for automated testing is relevant even if no finding says "missing mobile testing")
+   - Is the Handoff Index or Time Reclaimed score high in the catalog?
+
+4. Select the top 3-5 catalog entries that are NOT already covered by Tiers 1-3 recommendations. These are "you might not know you need this" suggestions.
+
+For each exploration recommendation, provide:
+- What it is and what it does
+- Why it's relevant to their specific workflow (not generic — tie it to observed projects/patterns)
+- Pillar scores from the catalog
+- Install command or setup steps
+- What it would change about their workflow
+
+**Key rule:** Tier 4 is explicitly exploratory. Label these as "explore" recommendations, not prescriptive fixes. The user should understand these are suggestions based on catalog matching, not diagnosed problems.
+
 ### Step 3: Build the recommendation output
 
 Write to a timestamped file:
@@ -80,6 +107,21 @@ Format:
   ],
   "buildList": [
     "List of recommendations that require development (type new-mcp or complex hooks)"
+  ],
+  "explore": [
+    {
+      "tool": "Name from catalog",
+      "catalogEntry": "MCP / CLI / Skill / Technique",
+      "description": "What it does",
+      "relevance": "Why it matters for THIS user's workflow — cite specific projects or patterns",
+      "pillarScores": {
+        "handoffIndex": "low | med | high",
+        "timeReclaimed": "low | med | high",
+        "agentReadiness": "low | med | high"
+      },
+      "setupSteps": "Install command or config steps",
+      "alreadyInstalled": false
+    }
   ]
 }
 ```
@@ -109,6 +151,14 @@ These require installation or development. For each:
 - Which diagnosis finding it addresses
 - Pillar scores
 - Link to repo/docs
+
+**Tier 4: Explore (catalog-driven suggestions)**
+These are NOT driven by a specific diagnosis finding. They come from browsing the catalog against the user's tech stack. For each:
+- What the tool does
+- Why it's relevant to their workflow (cite specific projects)
+- Pillar scores from the catalog
+- Setup steps
+- Make clear this is exploratory — "based on your iOS workflow, you might benefit from..."
 
 **Within each tier, sort by a composite score:**
 - high/high/high = do first
