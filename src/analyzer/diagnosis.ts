@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 import type { ScanResult, ProjectScan } from "../scanner/sessions.js";
 import type { InstalledTool } from "../scanner/installed.js";
 import type { WorkflowSignal } from "../scanner/signals.js";
+import { detectImplicitSignals, summarizeImplicitSignals } from "../scanner/implicit.js";
+import type { ImplicitSignal, ImplicitSignalSummary } from "../scanner/implicit.js";
 
 // ── Output Types ──
 
@@ -2408,6 +2410,7 @@ export interface ProjectBrief {
   rawAssistantHandoffs: string[];
   rawToolErrors: string[];
   heuristicFindings: string[];
+  implicitSignals: ImplicitSignalSummary;
 }
 
 export function buildDiagnosisData(
@@ -2446,6 +2449,11 @@ export function buildDiagnosisData(
       `[${loop.severity}] ${loop.name} — ${loop.humanRole}. Gap: ${loop.agentGap}`
     );
 
+    // Implicit signals — what systems was the human consulting between messages?
+    const toolTimestamps = project.toolCalls.map((tc) => tc.timestamp).filter(Boolean);
+    const rawImplicitSignals = detectImplicitSignals(project.userMessages, toolTimestamps);
+    const implicitSignals = summarizeImplicitSignals(rawImplicitSignals);
+
     briefs.push({
       project: projectDiagnosis.name,
       workflow: projectDiagnosis.workflow,
@@ -2456,6 +2464,7 @@ export function buildDiagnosisData(
       rawAssistantHandoffs,
       rawToolErrors,
       heuristicFindings,
+      implicitSignals,
     });
 
     // Also build the structured extraction prompt for backward compat

@@ -10,7 +10,13 @@ Run both commands. These are deterministic scrapers — no LLM needed.
 ```bash
 AGENTSCOUT_LLM_PROJECT_LIMIT=10 node dist/cli.js --emit-prompts 2>/dev/null
 ```
-Save this output — you'll split it by project in Phase 2. It contains `briefs[]` with per-project: `rawUserMessages`, `rawBashCommands`, `rawToolErrors`, `rawAssistantHandoffs`, `heuristicFindings`.
+Save this output — you'll split it by project in Phase 2. It contains `briefs[]` with per-project: `rawUserMessages`, `rawBashCommands`, `rawToolErrors`, `rawAssistantHandoffs`, `heuristicFindings`, and `implicitSignals`.
+
+The `implicitSignals` field is pre-computed by deterministic fingerprint detectors. It contains:
+- `signals[]` — each with `type` (pasted-logs, pasted-errors, pasted-stacktrace, pasted-config, pasted-output, external-observation, proactive-info, url-reference, system-reference, activity-gap), `source` (inferred external system), `evidence`, `messageSnippet`, and `confidence`
+- `systemsConsulted[]` — unique external systems the human interacted with
+- `totalGapMinutes` — time the human spent outside the session (from tool timestamp gaps)
+- `topSources[]` — most-referenced external systems with counts
 
 **1b. Tooling inventory:**
 ```bash
@@ -124,6 +130,48 @@ For each intervention, ask: **Is this genuinely a taste/judgment call, or is the
 - "reword for audio" → taste
 - "the TTS isn't playing" → mechanical (runtime log would show this)
 
+### Step E: Read between the lines (Implicit Analysis)
+
+The `implicitSignals` field contains pre-detected patterns suggesting the human consulted external systems before or during their messages. This is the "unsaid" layer — what the human DID that they didn't explicitly describe.
+
+**For each implicit signal:**
+
+1. **Validate the inferred source.** The `source` field is a best-guess from pattern matching. Is it correct? Adjust if you can infer better from context.
+
+2. **Connect to explicit interventions.** Does this implicit signal explain WHY the human sent a particular message? For example:
+   - A `pasted-logs` signal from "Xcode console" followed by a message about "I'm seeing tcp errors" → the human read Xcode console and relayed what they saw
+   - An `activity-gap` of 10 minutes followed by "the deploy is working now" → the human was checking deployment status
+   - An `external-observation` "I see..." followed by a UI bug report → the human was looking at the running app
+
+3. **Find INVISIBLE interventions.** Some human actions leave NO trace in the messages:
+   - The human checks a dashboard and everything is fine → no message generated, but they still spent time checking
+   - The human reads logs and filters mentally → they only paste the relevant part, hiding the reading+filtering work
+   - The human switches between browser tabs to compare states → the comparison is implicit
+   - The human refreshes a page to see if a deploy landed → the refreshing is invisible
+
+   For `activity-gap` signals, ask: **What was the human probably doing during this gap?** Use surrounding messages as context.
+
+4. **Identify systems the agent should have been reading.** For each `systemsConsulted` entry:
+   - Does the inventory have a tool that can read from this system?
+   - If yes, why wasn't the agent reading it directly?
+   - If no, what tool would be needed?
+
+5. **Look for the RELAY pattern.** The highest-value implicit finding is:
+   > Human reads from System A → mentally processes → types summary into Claude Code
+
+   This is mechanical relay work. The agent should be reading System A directly. Examples:
+   - Human reads Railway logs → pastes relevant error → tells agent what to fix
+   - Human checks Vercel dashboard → reports deployment failed → agent troubleshoots
+   - Human reads Xcode console → filters to relevant error → copies error text
+   - Human screenshots iOS Simulator → describes what they see → agent edits code
+
+   For each relay pattern found, add an intervention with `isImplicit: true`.
+
+**Create entries for implicit findings with the same format as Step A, but add:**
+- `"isImplicit": true` — this was inferred, not directly quoted
+- `"implicitSource"` — the signal type and source that triggered the inference
+- For the `quote` field, use the closest user message that connects to the implicit action
+
 ### Output Format
 
 Return a JSON object (just the object, no markdown fences):
@@ -149,7 +197,22 @@ Return a JSON object (just the object, no markdown fences):
       "category": "1 | 2 | 3 | 4 | 5a | 5b | 5c | 5d | 5e | 6 | 7 | 8",
       "severity": "low | med | high | critical",
       "isJudgmentCall": false,
+      "isImplicit": false,
+      "implicitSource": null,
       "whyNotJudgment": "Why this is mechanical, not taste (null if isJudgmentCall=true)"
+    }
+  ],
+  "implicitFindings": [
+    {
+      "quote": "Closest user message connected to this implicit action",
+      "humanAction": "What the human actually did (reading logs, checking dashboard, etc.)",
+      "systemBrokered": "The external system they consulted",
+      "relayPattern": "Human reads [system] → processes → types [action] into Claude Code",
+      "inventoryCheck": { "...same as above..." },
+      "category": "1 | 2 | 3 | 4 | 5a | 5b | 5c | 5d | 5e | 6 | 7 | 8",
+      "severity": "low | med | high | critical",
+      "confidence": "low | med | high",
+      "whatAgentShouldDo": "Specific action: read logs via X, check dashboard via Y, etc."
     }
   ],
   "judgmentCalls": [
@@ -158,6 +221,7 @@ Return a JSON object (just the object, no markdown fences):
       "why": "Why this genuinely requires human taste"
     }
   ],
+  "systemsHumanBrokered": ["List of ALL external systems the human consulted, from both explicit interventions and implicit signals"],
   "confidenceNotes": ["What you're unsure about"]
 }
 
@@ -181,6 +245,8 @@ Look for the SAME integration gap appearing across multiple projects:
 - Same MCP server unused across projects → systemic awareness problem
 - Same category appearing frequently → systemic gap
 - Same tool misconfigured in the same way → one config fix covers many projects
+- Same external system appearing in `systemsHumanBrokered` across projects → systemic relay pattern
+- Same implicit relay pattern (human reads X, tells agent) across projects → highest-leverage integration to build
 
 ### Step 3: Rank findings
 
@@ -224,6 +290,19 @@ Merge the subagent outputs into the answers format. For each project, take the s
             "evidence": ["Direct quotes"]
           }
         ],
+        "implicitFindings": [
+          {
+            "title": "Name of the implicit finding",
+            "relayPattern": "Human reads [system] → processes → types [action]",
+            "systemBrokered": "The external system",
+            "category": "1-8",
+            "severity": "low|med|high|critical",
+            "confidence": "low|med|high",
+            "integration": "How to remove the human from this relay loop",
+            "evidence": ["Closest user messages + implicit signal data"]
+          }
+        ],
+        "systemsHumanBrokered": ["All external systems from both explicit and implicit"],
         "nonFixableJudgment": ["From subagent judgmentCalls"],
         "commodityToIgnore": ["Routine chores identified"],
         "confidenceNotes": ["From subagent + your own"]
@@ -244,12 +323,17 @@ cat <timestamped-filename>.json | node dist/cli.js --apply-answers 2>/dev/null
 
 Write prose, not tables. For each project:
 - What system boundary is the human brokering? (1-2 sentences)
-- How many total interventions were found? How many are category 5 (existing tool issues)?
-- The top 2-3 findings, with:
+- How many total interventions were found? How many are explicit vs implicit? How many are category 5?
+- **Explicit findings** (top 2-3): what the human said or did directly
   - The systems involved
   - Quoted evidence from the human
   - For category 5: name the tool, the subcategory (5a-5e), and the specific fix
   - For other categories: the integration that would remove the human from this loop
+- **Implicit findings** (top 2-3): what the human was doing BETWEEN messages
+  - The relay pattern: "Human reads [X] → filters mentally → types [Y]"
+  - What system they were consulting and how we know (fingerprint evidence)
+  - What the agent should be doing instead (specific tool/MCP/hook)
+  - Confidence level and what would increase it
 - What genuinely stays human-owned and why?
 
 Then across ALL projects, list the **top 5 concrete things to fix or build**, ranked by the cross-project scoring from Step 3. For each:
