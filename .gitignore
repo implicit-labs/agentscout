@@ -9,5 +9,12 @@ agentscout-recs-*.json
 agentscout-recs-*.html
 agentscout-analysis-*.json
 
+# Internal dev artifacts
+PRD.md
+task-list.md
+DIAGNOSIS.md
+DIFFERENTIATOR.md
+scripts/ralph/
+
 # Playwright MCP
 .playwright-mcp/
