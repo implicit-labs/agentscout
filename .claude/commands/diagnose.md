@@ -126,7 +126,20 @@ Assign each intervention to one of these categories:
 
 8. **Missing skill or workflow convention**: Solvable with a `.md` file, not new infrastructure.
 
-### Step D: Separate judgment from integration
+### Step D: Collect raw user voice
+
+Scan `rawUserMessages` for the user's unfiltered reactions. Extract **every** quote where the user:
+- Corrects the agent ("no", "wrong", "that's not what I said", "revert", "go back")
+- Expresses frustration (expletives, "wtf", "useless", "still broken", "again")
+- Resignedly re-explains ("I already told you", "like I said")
+- Types fast/angry (visible typos: "dind't", "sam ehook", "impossibel", "shoudn't")
+- Bluntly rejects ("I don't like this", "stop", "don't make changes yet")
+- Repeats a request 2+ times in a row
+- Gives up ("never mind", "forget it", "I'll do it myself")
+
+Keep quotes short — trim to the punchiest part (under ~80 chars). Keep ALL typos. These are the user's real voice. Collect as many as you find — do not filter for "best," collect them all.
+
+### Step E: Separate judgment from integration
 
 For each intervention, ask: **Is this genuinely a taste/judgment call, or is the human doing mechanical work?**
 
@@ -228,6 +241,12 @@ Return a JSON object (just the object, no markdown fences):
       "why": "Why this genuinely requires human taste"
     }
   ],
+  "rawUserVoice": [
+    {
+      "quote": "Exact user quote, typos and all",
+      "type": "correction | frustration | re-explanation | anger-typo | rejection | repeated-request | giving-up"
+    }
+  ],
   "systemsHumanBrokered": ["List of ALL external systems the human consulted, from both explicit interventions and implicit signals"],
   "confidenceNotes": ["What you're unsure about"]
 }
@@ -244,7 +263,7 @@ You now have deep analysis from every subagent. Your job is to synthesize.
 
 ### Step 1: Collect all subagent outputs
 
-Read each subagent's JSON output. You should have one per project.
+Read each subagent's JSON output. You should have one per project. Merge all `rawUserVoice` arrays — these flow into the answers JSON per-project and are used by `/recommend` to populate the quote wall.
 
 ### Step 2: Find cross-project patterns
 
@@ -254,6 +273,7 @@ Look for the SAME integration gap appearing across multiple projects:
 - Same tool misconfigured in the same way → one config fix covers many projects
 - Same external system appearing in `systemsHumanBrokered` across projects → systemic relay pattern
 - Same implicit relay pattern (human reads X, tells agent) across projects → highest-leverage integration to build
+- Same frustration patterns in `rawUserVoice` across projects → systemic UX failure
 
 ### Step 3: Rank findings
 
@@ -310,6 +330,12 @@ Merge the subagent outputs into the answers format. For each project, take the s
           }
         ],
         "systemsHumanBrokered": ["All external systems from both explicit and implicit"],
+        "rawUserVoice": [
+          {
+            "quote": "From subagent rawUserVoice — every frustrated/corrective quote",
+            "type": "correction | frustration | re-explanation | anger-typo | rejection | repeated-request | giving-up"
+          }
+        ],
         "nonFixableJudgment": ["From subagent judgmentCalls"],
         "commodityToIgnore": ["Routine chores identified"],
         "confidenceNotes": ["From subagent + your own"]
