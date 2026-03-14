@@ -16,5 +16,9 @@ DIAGNOSIS.md
 DIFFERENTIATOR.md
 scripts/ralph/
 
+# Environment and local settings
+.env*
+.claude/settings.local.json
+
 # Playwright MCP
 .playwright-mcp/

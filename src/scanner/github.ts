@@ -73,9 +73,12 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
 
 async function fetchRepoMetadata(owner: string, repo: string): Promise<RepoMetadata | null> {
   try {
+    // Validate owner/repo to prevent injection (only allow alphanumeric, hyphens, underscores, dots)
+    if (!/^[\w.-]+$/.test(owner) || !/^[\w.-]+$/.test(repo)) return null;
+
     // Fetch repo info + owner profile in one call using GraphQL
-    const query = `query {
-      repository(owner: "${owner}", name: "${repo}") {
+    const query = `query($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
         stargazerCount
         isArchived
         description
@@ -109,7 +112,7 @@ async function fetchRepoMetadata(owner: string, repo: string): Promise<RepoMetad
     }`;
 
     const result = execSync(
-      `gh api graphql -f query='${query.replace(/'/g, "'\\''")}'`,
+      `gh api graphql -f query='${query.replace(/'/g, "'\\''")}' -f owner='${owner.replace(/'/g, "'\\''")}' -f repo='${repo.replace(/'/g, "'\\''")}'`,
       { stdio: "pipe", timeout: 10000, encoding: "utf-8" }
     );
 

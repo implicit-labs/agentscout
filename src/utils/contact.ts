@@ -21,8 +21,8 @@ export function buildContactInfo(
   painContext?: string
 ): ContactInfo {
   const message = painContext
-    ? `Hey! I found ${toolName} via AgentScout (agentscout.polsia.app). ${painContext} — does ${toolName} handle this well? Any gotchas I should know about?`
-    : `Hey! I found ${toolName} via AgentScout (agentscout.polsia.app) and I'm considering adopting it. Any tips or gotchas for getting started?`;
+    ? `Hey! I found ${toolName} via AgentScout (github.com/implicit-labs/agentscout). ${painContext} — does ${toolName} handle this well? Any gotchas I should know about?`
+    : `Hey! I found ${toolName} via AgentScout (github.com/implicit-labs/agentscout) and I'm considering adopting it. Any tips or gotchas for getting started?`;
 
   const encodedMessage = encodeURIComponent(message);
   const result: ContactInfo = {

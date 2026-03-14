@@ -1,6 +1,6 @@
 # Potential Solutions Catalog
 
-Curated from Twitter bookmarks, tom_doerr repo_posts, and web research (updated 2026-03-13). These are tools, MCPs, CLIs, skills, and techniques that solve real agentic coding workflow problems.
+Curated from community recommendations, open-source discovery, and web research (updated 2026-03-13). These are tools, MCPs, CLIs, skills, and techniques that solve real agentic coding workflow problems.
 
 Pillar scores: **HI** = Handoff Index, **TR** = Time Reclaimed, **AR** = Agent Readiness. Scale: low / med / high.
 
