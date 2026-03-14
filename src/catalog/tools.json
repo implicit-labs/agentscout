@@ -406,5 +406,226 @@
       "permissions": "SQLite file access",
       "riskLevel": "low"
     }
+  },
+  {
+    "id": "context7",
+    "name": "Context7",
+    "type": "mcp",
+    "installCommand": "npx -y @upstash/context7-mcp@latest",
+    "url": "https://github.com/upstash/context7",
+    "patterns": ["documentation", "search"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop letting your agent hallucinate outdated APIs. Context7 feeds live, version-specific library docs directly into your session — no more 'that method was deprecated 6 months ago' surprises.",
+    "meta": {
+      "stars": 48910,
+      "permissions": "None (fetches public docs)",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "xcode-build-mcp",
+    "name": "XcodeBuild MCP",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: xcodebuild-mcp",
+    "url": "https://github.com/getsentry/XcodeBuildMCP",
+    "patterns": ["ios", "testing"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop pasting Xcode build errors into chat. Your agent triggers builds, reads compiler errors, and runs tests directly — closing the iOS build-fix loop without you touching Xcode.",
+    "meta": {
+      "stars": 4716,
+      "permissions": "Xcode CLI tools access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "claude-squad",
+    "name": "Claude Squad",
+    "type": "cli",
+    "installCommand": "go install github.com/smtg-ai/claude-squad@latest",
+    "url": "https://github.com/smtg-ai/claude-squad",
+    "patterns": ["local-development"],
+    "workflowOwnership": "high",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop manually juggling tmux panes for parallel agent work. Claude Squad manages multiple agents in isolated workspaces — you see all their progress in one terminal.",
+    "meta": {
+      "stars": 6332,
+      "permissions": "Terminal access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "claude-flow",
+    "name": "Claude Flow (ruflo)",
+    "type": "cli",
+    "installCommand": "npm install -g @ruvnet/claude-flow",
+    "url": "https://github.com/ruvnet/claude-flow",
+    "patterns": ["local-development", "testing"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop being the orchestrator between agents that write, test, and review. Claude Flow deploys multi-agent swarms that coordinate autonomously — you set the goal, they figure out who does what.",
+    "meta": {
+      "stars": 20872,
+      "permissions": "Terminal + filesystem access",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "ccusage",
+    "name": "ccusage",
+    "type": "cli",
+    "installCommand": "npm install -g ccusage",
+    "url": "https://github.com/ryoppippi/ccusage",
+    "patterns": ["monitoring"],
+    "workflowOwnership": "low",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop guessing how much your agent sessions cost. ccusage parses your local logs and shows token usage, cost breakdown, and trends — so you know which workflows are burning tokens.",
+    "meta": {
+      "stars": 11516,
+      "permissions": "Reads local JSONL logs",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "gstack",
+    "name": "gstack",
+    "type": "package",
+    "installCommand": "git clone https://github.com/garrytan/gstack && cp -r gstack/skills .claude/skills/",
+    "url": "https://github.com/garrytan/gstack",
+    "patterns": ["documentation", "testing", "ci-cd"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Garry Tan's exact Claude Code setup — 6 opinionated skills that act as CEO, eng manager, release manager, and QA. Skip months of prompt engineering and start with a battle-tested workflow.",
+    "meta": {
+      "stars": 5445,
+      "permissions": "None (skills only)",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "claude-context-mcp",
+    "name": "Claude Context MCP",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: claude-context",
+    "url": "https://github.com/zilliztech/claude-context",
+    "patterns": ["search"],
+    "workflowOwnership": "med",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop waiting for your agent to grep through a million lines. Claude Context indexes your entire codebase for semantic search — your agent finds the right code instantly, not approximately.",
+    "meta": {
+      "stars": 5626,
+      "permissions": "Codebase read access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "react-doctor",
+    "name": "React Doctor",
+    "type": "cli",
+    "installCommand": "npx react-doctor",
+    "url": "https://github.com/millionco/react-doctor",
+    "patterns": ["testing"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop shipping React anti-patterns your agent introduced. React Doctor scans for performance issues, security holes, and bad practices — your agent's code reviewer for React.",
+    "meta": {
+      "stars": 5727,
+      "permissions": "Codebase read access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "knowledge-work-plugins",
+    "name": "Anthropic Knowledge Work Plugins",
+    "type": "mcp",
+    "installCommand": "claude plugins install knowledge-work-plugins",
+    "url": "https://github.com/anthropics/knowledge-work-plugins",
+    "patterns": ["project-management", "documentation"],
+    "workflowOwnership": "high",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Official Anthropic plugins that connect Claude to enterprise tools — Jira, Confluence, Google Workspace. Your agent reads specs, updates tickets, and drafts docs without you being the copy-paste relay.",
+    "meta": {
+      "stars": 9048,
+      "permissions": "Enterprise tool OAuth",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "shotgun",
+    "name": "Shotgun",
+    "type": "cli",
+    "installCommand": "npm install -g @shotgun-sh/shotgun",
+    "url": "https://github.com/shotgun-sh/shotgun",
+    "patterns": ["git", "ci-cd"],
+    "workflowOwnership": "high",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Stop reviewing 800-line PRs your agent dumped on you. Shotgun splits features into staged, codebase-aware specs so agents produce reviewable, incremental PRs — not monster diffs.",
+    "meta": {
+      "stars": 653,
+      "permissions": "Git repo access",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "claude-code-mcp",
+    "name": "Claude Code MCP (nested agents)",
+    "type": "mcp",
+    "installCommand": "npx -y @anthropic/claude-code-mcp",
+    "url": "https://github.com/steipete/claude-code-mcp",
+    "patterns": ["local-development"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "high",
+    "sellTemplate": "Agent-in-agent delegation. Your main Claude session spawns one-shot sub-agents for isolated tasks — research, file generation, refactoring — without polluting your primary context.",
+    "meta": {
+      "stars": 1171,
+      "permissions": "Terminal access",
+      "riskLevel": "medium"
+    }
+  },
+  {
+    "id": "figma-mcp",
+    "name": "Figma MCP Server",
+    "type": "mcp",
+    "installCommand": "Add to .claude/settings.json: figma-mcp",
+    "url": "https://github.com/anthropics/mcp-figma",
+    "patterns": ["browser", "file-management"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop manually translating Figma designs into code. Your agent reads the actual design file — colors, spacing, components — and generates matching UI. The design-to-code gap disappears.",
+    "meta": {
+      "stars": 5000,
+      "permissions": "Figma API token",
+      "riskLevel": "low"
+    }
+  },
+  {
+    "id": "mcp-superassistant",
+    "name": "MCP SuperAssistant",
+    "type": "mcp",
+    "installCommand": "Chrome extension install",
+    "url": "https://github.com/srbhptl39/MCP-SuperAssistant",
+    "patterns": ["browser"],
+    "workflowOwnership": "med",
+    "painEliminated": "med",
+    "agentReadiness": "med",
+    "sellTemplate": "Brings MCP to ChatGPT, DeepSeek, Perplexity, and more. Use your MCP servers across any AI chat interface — not just Claude.",
+    "meta": {
+      "stars": 2338,
+      "permissions": "Browser extension",
+      "riskLevel": "medium"
+    }
   }
 ]

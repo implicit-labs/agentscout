@@ -1,0 +1,366 @@
+[
+  {
+    "id": "context7",
+    "name": "Context7",
+    "type": "mcp",
+    "url": "https://github.com/upstash/context7",
+    "description": "Live, version-specific library documentation from Upstash. Stops agent from using stale/hallucinated API docs.",
+    "patterns": ["documentation", "search"],
+    "signal": {
+      "source": "turbodocx + claudefast lists",
+      "engagement": "high — recommended across multiple best-of lists",
+      "creator": "Upstash"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "xcode-build-mcp",
+    "name": "XcodeBuild MCP",
+    "type": "mcp",
+    "url": "https://github.com/getsentry/XcodeBuildMCP",
+    "description": "MCP server for AI agents on Apple platforms. Build, test, and manage Xcode projects.",
+    "patterns": ["ios", "testing"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "Sentry-backed, listed on tom_doerr page",
+      "creator": "Sentry"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "shotgun",
+    "name": "Shotgun",
+    "type": "cli",
+    "url": "https://github.com/shotgun-sh/shotgun",
+    "description": "Splits features into staged PRs for AI agents. Decomposes large changes into reviewable chunks.",
+    "patterns": ["git", "ci-cd"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "shotgun-sh"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "claude-code-damage-control",
+    "name": "Claude Code Damage Control",
+    "type": "cli",
+    "url": "https://github.com/disler/claude-code-damage-control",
+    "description": "Blocks dangerous commands for Claude Code. Safety guardrails for agent actions.",
+    "patterns": ["file-management"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "disler"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "claude-context-mcp",
+    "name": "Claude Context MCP",
+    "type": "mcp",
+    "url": "https://github.com/zilliztech/claude-context",
+    "description": "Semantic code search across millions of lines. Vector-based codebase understanding.",
+    "patterns": ["search"],
+    "signal": {
+      "source": "claudefast best-of list",
+      "engagement": "high — Zilliz-backed (Milvus creators)",
+      "creator": "Zilliz"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "claude-squad",
+    "name": "Claude Squad",
+    "type": "cli",
+    "url": "https://github.com/smtg-ai/claude-squad",
+    "description": "Terminal app managing multiple Claude agents in parallel workspaces with tmux.",
+    "patterns": ["local-development"],
+    "signal": {
+      "source": "claudefast best-of list",
+      "engagement": "high — multi-agent orchestration",
+      "creator": "smtg-ai"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "claude-flow",
+    "name": "Claude Flow",
+    "type": "cli",
+    "url": "https://github.com/ruvnet/claude-flow",
+    "description": "Autonomous code writing, editing, testing orchestration. Multi-agent coordination.",
+    "patterns": ["local-development", "testing"],
+    "signal": {
+      "source": "claudefast best-of list",
+      "engagement": "high",
+      "creator": "ruvnet"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "osm-mcp",
+    "name": "OpenStreetMap MCP",
+    "type": "mcp",
+    "url": "https://github.com/wiseman/osm-mcp",
+    "description": "Query and visualize OpenStreetMap data via MCP. Geospatial data access for agents.",
+    "patterns": ["api-requests"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "wiseman"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "devops-toolkit",
+    "name": "DevOps Toolkit",
+    "type": "package",
+    "url": "https://github.com/adamancini/devops-toolkit",
+    "description": "Agents and skills for Claude Code focused on DevOps — infrastructure, deployment, monitoring.",
+    "patterns": ["deployment", "cloud", "docker", "monitoring"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "adamancini"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "mcp-agent-mail",
+    "name": "MCP Agent Mail",
+    "type": "mcp",
+    "url": "https://github.com/Dicklesworthstone/mcp_agent_mail_rust",
+    "description": "Coordination layer for AI coding agents via MCP. Inter-agent messaging.",
+    "patterns": ["local-development"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "Dicklesworthstone"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "react-doctor",
+    "name": "React Doctor",
+    "type": "cli",
+    "url": "https://github.com/millionco/react-doctor",
+    "description": "Scans React codebases for security and performance issues. Automated code quality.",
+    "patterns": ["testing"],
+    "signal": {
+      "source": "tom_doerr repo_posts + existing potential-solutions.md",
+      "engagement": "in both sources",
+      "creator": "millionco"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "microsoft-agent-governance",
+    "name": "Microsoft Agent Governance Toolkit",
+    "type": "package",
+    "url": "https://github.com/microsoft/agent-governance-toolkit",
+    "description": "Security middleware for autonomous AI agents. Guardrails and policy enforcement.",
+    "patterns": ["file-management"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "Microsoft-backed",
+      "creator": "Microsoft"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "metorial-mcp",
+    "name": "Metorial",
+    "type": "mcp",
+    "url": "https://github.com/metorial/metorial",
+    "description": "Connects AI models to APIs and tools via MCP. Universal API integration layer.",
+    "patterns": ["api-requests"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "metorial"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "godot-mcp",
+    "name": "Godot MCP",
+    "type": "mcp",
+    "url": "https://github.com/bradypp/godot-mcp",
+    "description": "Connects AI assistants to the Godot game engine via MCP.",
+    "patterns": ["local-development"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "bradypp"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "knowledge-work-plugins",
+    "name": "Anthropic Knowledge Work Plugins",
+    "type": "mcp",
+    "url": "https://github.com/anthropics/knowledge-work-plugins",
+    "description": "Connects Claude to enterprise tools for specialized roles. Official Anthropic plugins.",
+    "patterns": ["project-management", "documentation"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "Anthropic official",
+      "creator": "Anthropic"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "mcp-superassistant",
+    "name": "MCP SuperAssistant",
+    "type": "mcp",
+    "url": "https://github.com/srbhptl39/MCP-SuperAssistant",
+    "description": "Integrates Model Context Protocol tools into AI assistants. Browser extension for MCP in web UIs.",
+    "patterns": ["browser"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "srbhptl39"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "gstack",
+    "name": "gstack",
+    "type": "package",
+    "url": "https://github.com/garrytan/gstack",
+    "description": "Six bundled Claude Code skills for planning, review, and shipping. By Garry Tan (YC CEO).",
+    "patterns": ["documentation", "testing"],
+    "signal": {
+      "source": "turbodocx best-of list",
+      "engagement": "high — YC CEO created it",
+      "creator": "Garry Tan"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "ccusage",
+    "name": "ccusage",
+    "type": "cli",
+    "url": "https://github.com/ryoppippi/ccusage",
+    "description": "CLI tool analyzing Claude Code logs with cost and token dashboard.",
+    "patterns": ["monitoring"],
+    "signal": {
+      "source": "claudefast best-of list",
+      "engagement": "listed in usage monitors section",
+      "creator": "ryoppippi"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "figma-mcp",
+    "name": "Figma MCP Server",
+    "type": "mcp",
+    "url": "https://github.com/anthropics/mcp-figma",
+    "description": "Design-to-code bridge. Agent reads Figma designs and generates matching code.",
+    "patterns": ["browser", "file-management"],
+    "signal": {
+      "source": "existing potential-solutions.md + web search",
+      "engagement": "Anthropic official MCP App partner",
+      "creator": "Anthropic + Figma"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "claude-code-mcp",
+    "name": "Claude Code MCP (nested agents)",
+    "type": "mcp",
+    "url": "https://github.com/steipete/claude-code-mcp",
+    "description": "Claude Code as one-shot MCP server. Agent-in-agent for delegation.",
+    "patterns": ["local-development"],
+    "signal": {
+      "source": "claudefast best-of list",
+      "engagement": "high — steipete (well-known iOS dev)",
+      "creator": "steipete"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "opencode-agent-skills",
+    "name": "OpenCode Agent Skills",
+    "type": "package",
+    "url": "https://github.com/joshuadavidthomas/opencode-agent-skills",
+    "description": "Plugin for loading and using AI agent skills. Skill management framework.",
+    "patterns": ["local-development"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "joshuadavidthomas"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "orama",
+    "name": "Orama",
+    "type": "package",
+    "url": "https://github.com/oramasearch/orama",
+    "description": "Search engine and RAG pipeline for browsers and edge networks. Full-text + vector search.",
+    "patterns": ["search"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-13)",
+      "engagement": "listed on curated page",
+      "creator": "oramasearch"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "bmad-method",
+    "name": "BMAD Method",
+    "type": "package",
+    "url": "https://github.com/bmad-code-org/BMAD-METHOD",
+    "description": "Module for development using AI and agile workflows. Structured agent development methodology.",
+    "patterns": ["documentation"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "bmad-code-org"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "shodh-memory",
+    "name": "Shodh Memory",
+    "type": "package",
+    "url": "https://github.com/varun29ankuS/shodh-memory",
+    "description": "Memory for agents with decay and associations. Biologically-inspired context persistence.",
+    "patterns": ["search"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "varun29ankuS"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "learning-opportunities",
+    "name": "Learning Opportunities",
+    "type": "package",
+    "url": "https://github.com/DrCatHicks/learning-opportunities",
+    "description": "Claude skill for skill development during agentic coding. Teaches while coding.",
+    "patterns": ["documentation"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "DrCatHicks"
+    },
+    "alreadyInCatalog": false
+  },
+  {
+    "id": "git-ledger",
+    "name": "Ledger",
+    "type": "cli",
+    "url": "https://github.com/peterjthomson/ledger",
+    "description": "Interface for git to manage code from agents and humans. Tracks agent vs human contributions.",
+    "patterns": ["git"],
+    "signal": {
+      "source": "tom_doerr repo_posts (2026-03-12)",
+      "engagement": "listed on curated page",
+      "creator": "peterjthomson"
+    },
+    "alreadyInCatalog": false
+  }
+]
