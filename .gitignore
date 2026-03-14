@@ -1,4 +1,12 @@
 node_modules/
 dist/
 *.tgz
-.agentscout-answers.json
+
+# AgentScout output artifacts
+agentscout-answers-*.json
+agentscout-recs-*.json
+agentscout-recs-*.html
+agentscout-analysis-*.json
+
+# Playwright MCP
+.playwright-mcp/
