@@ -1,3 +1,24 @@
 node_modules/
 dist/
 *.tgz
+
+# AgentScout output artifacts
+.agentscout-answers.json
+agentscout-answers-*.json
+agentscout-recs-*.json
+agentscout-recs-*.html
+agentscout-analysis-*.json
+
+# Internal dev artifacts
+PRD.md
+task-list.md
+DIAGNOSIS.md
+DIFFERENTIATOR.md
+scripts/ralph/
+
+# Environment and local settings
+.env*
+.claude/settings.local.json
+
+# Playwright MCP
+.playwright-mcp/
