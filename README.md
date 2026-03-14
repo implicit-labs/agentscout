@@ -2,133 +2,184 @@
 
 **Your agents should shop for their own tools.**
 
-AgentScout analyzes your [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) sessions to find where you're doing work the agent could handle — then recommends the exact tools, configs, and skills to close those gaps.
+AgentScout analyzes your [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) sessions to find where *you're* doing work the agent could handle — then recommends the exact tools, configs, and skills to close those gaps.
 
-## What it does
+## How it works
 
 1. **Scans** your Claude Code session history (`~/.claude/projects/`)
 2. **Diagnoses** workflow breakdowns — where you interrupted the agent, pasted logs, relayed errors, or manually verified output
 3. **Recommends** concrete fixes: MCP servers, CLI tools, CLAUDE.md rules, hooks, and skills — scored on three pillars
 
-### The three pillars
-
-| Pillar | Question it answers |
-|--------|-------------------|
-| **Handoff Index** | Does this tool let the agent own the full workflow without human relay? |
+| Pillar | What it measures |
+|--------|-----------------|
+| **Handoff Index** | Can the agent own the full workflow without human relay? |
 | **Time Reclaimed** | How much human interruption time does this eliminate? |
-| **Agent Readiness** | Is this tool mature, maintained, and safe to install? |
+| **Agent Readiness** | Is the tool mature, maintained, and safe to install? |
 
-## Quick start
+## Installation
+
+### Prerequisites
+
+- **Node.js >= 18** — check with `node --version`
+- **Claude Code** — installed and used for a while (AgentScout needs session history in `~/.claude/projects/`)
+- **GitHub CLI (`gh`)** — optional, used to enrich tool recommendations with live GitHub metadata. Install: `brew install gh && gh auth login`
+
+### Option A: Clone the repo (recommended)
 
 ```bash
-# Clone and build
 git clone https://github.com/implicit-labs/agentscout.git
 cd agentscout
-npm install && npm run build
-
-# Copy the skills into your project
-cp -r .claude/commands/diagnose.md YOUR_PROJECT/.claude/commands/
-cp -r .claude/commands/recommend.md YOUR_PROJECT/.claude/commands/
+npm install
+npm run build
 ```
 
-Then inside Claude Code:
-
-```
-/diagnose          # Analyze your workflow across all projects
-/diagnose myapp    # Scope to a single project
-/recommend         # Generate recommendations from the latest diagnosis
-```
-
-## How it works
-
-### `/diagnose` — 3-phase workflow analysis
-
-**Phase 1:** Deterministic scanners extract session data — tool uses, user messages, bash commands, errors, and implicit signals (pasted logs, activity gaps, external system references).
-
-**Phase 2:** Subagents deep-dive each project independently. They classify every human intervention: Was it taste/judgment (keep it), or mechanical relay (automate it)? They extract the user's raw voice — frustration, corrections, typos — as evidence.
-
-**Phase 3:** Cross-project synthesis. The same tool misconfigured everywhere? One fix. The same external dashboard brokered across projects? Systemic pattern.
-
-Output: `agentscout-answers-{timestamp}.json`
-
-### `/recommend` — tiered recommendations
-
-Reads the diagnosis and matches findings against a curated catalog of 60+ tools, MCPs, CLIs, and techniques.
-
-**Tier 1 — Quick wins:** CLAUDE.md rules, config fixes, shell aliases. Zero install, immediate value.
-
-**Tier 2 — Build this week:** MCP servers, hooks, skills that close a specific workflow gap.
-
-**Tier 3 — Build when ready:** Larger integrations (CI/CD pipelines, custom MCPs) that require setup.
-
-**Tier 4 — Explore:** Proactive recommendations from the catalog that match your tech stack, even if the diagnosis didn't flag them.
-
-Every recommendation includes preflight checks (runtime requirements, API keys, conflicts) and setup code.
-
-Output: `agentscout-recs-{timestamp}.json` + HTML report
-
-## Using as an `npx` skill
-
-You can reference AgentScout's skills directly from any project without cloning:
+Then copy the two skill files into any project you want to diagnose:
 
 ```bash
-# In your project's .claude/settings.json, add the skill source:
-{
-  "skills": ["github:implicit-labs/agentscout/.claude/commands/diagnose.md",
-             "github:implicit-labs/agentscout/.claude/commands/recommend.md"]
-}
+# Create the commands directory if it doesn't exist
+mkdir -p /path/to/your/project/.claude/commands
+
+# Copy the skills
+cp .claude/commands/diagnose.md /path/to/your/project/.claude/commands/
+cp .claude/commands/recommend.md /path/to/your/project/.claude/commands/
 ```
 
-Or install globally and use the CLI directly:
+### Option B: Install globally via npm
 
 ```bash
 npm install -g agentscout
-agentscout --emit-prompts    # Output diagnosis prompts as JSON
-agentscout --inventory       # Output tooling inventory as JSON
-agentscout --apply-answers   # Synthesize subagent answers into report
+```
+
+You still need the skill files in your project — the npm package provides the CLI that the skills call under the hood:
+
+```bash
+mkdir -p /path/to/your/project/.claude/commands
+
+# Download the skills directly from GitHub
+curl -o /path/to/your/project/.claude/commands/diagnose.md \
+  https://raw.githubusercontent.com/implicit-labs/agentscout/main/.claude/commands/diagnose.md
+
+curl -o /path/to/your/project/.claude/commands/recommend.md \
+  https://raw.githubusercontent.com/implicit-labs/agentscout/main/.claude/commands/recommend.md
+```
+
+## Usage
+
+Open Claude Code in any project that has the skill files installed, then:
+
+```
+/diagnose              Analyze your workflow across all projects
+/diagnose myproject    Scope diagnosis to a single project
+/recommend             Generate tool recommendations from the latest diagnosis
+```
+
+That's it. The skills orchestrate everything — scanning sessions, spawning subagents for per-project analysis, and synthesizing results.
+
+### What `/diagnose` does
+
+**Phase 1 — Gather data.** Deterministic scanners extract tool uses, user messages, bash commands, errors, and implicit signals (pasted logs, activity gaps, external system references) from your session history.
+
+**Phase 2 — Deep-dive per project.** Subagents analyze each project independently. Every human intervention is classified: taste/judgment (keep it) or mechanical relay (automate it). The user's raw voice — frustration, corrections, typos — is extracted as evidence.
+
+**Phase 3 — Cross-project synthesis.** Same tool misconfigured everywhere? One fix. Same external dashboard brokered across projects? Systemic pattern.
+
+Outputs `agentscout-answers-{timestamp}.json` in your working directory.
+
+### What `/recommend` does
+
+Reads the diagnosis and matches findings against a curated catalog of 60+ tools, MCPs, CLIs, and techniques. Generates a tiered playbook:
+
+| Tier | What | Examples |
+|------|------|---------|
+| **1 — Quick wins** | Zero-install fixes | CLAUDE.md rules, config changes, shell aliases |
+| **2 — Build this week** | Single-tool installs | MCP servers, hooks, skills |
+| **3 — Build when ready** | Larger integrations | CI/CD pipelines, custom MCPs |
+| **4 — Explore** | Catalog matches | Tools that match your stack but weren't flagged by diagnosis |
+
+Every recommendation includes preflight checks (runtime requirements, API keys, conflicts) and setup code.
+
+Outputs `agentscout-recs-{timestamp}.json` and an HTML report.
+
+## Updating
+
+### If you cloned the repo
+
+```bash
+cd agentscout
+git pull
+npm install
+npm run build
+```
+
+Then re-copy the skill files to your projects (they may have been updated):
+
+```bash
+cp .claude/commands/diagnose.md /path/to/your/project/.claude/commands/
+cp .claude/commands/recommend.md /path/to/your/project/.claude/commands/
+```
+
+### If you installed via npm
+
+```bash
+npm update -g agentscout
+```
+
+Re-download the skill files:
+
+```bash
+curl -o /path/to/your/project/.claude/commands/diagnose.md \
+  https://raw.githubusercontent.com/implicit-labs/agentscout/main/.claude/commands/diagnose.md
+
+curl -o /path/to/your/project/.claude/commands/recommend.md \
+  https://raw.githubusercontent.com/implicit-labs/agentscout/main/.claude/commands/recommend.md
+```
+
+## CLI reference
+
+The skills call the CLI under the hood, but you can use it directly:
+
+```
+agentscout --help                Show usage
+agentscout --inventory           Output your current tooling inventory as JSON
+agentscout --emit-prompts        Scan sessions and output diagnosis prompts as JSON
+agentscout --apply-answers       Read subagent answers from stdin and output synthesized report
+agentscout --project <name>      Scope to a single project (combine with --emit-prompts or --apply-answers)
 ```
 
 ## Project structure
 
 ```
 .claude/commands/
-  diagnose.md          # 3-phase diagnosis skill
-  recommend.md         # Recommendation generation skill
+  diagnose.md             3-phase diagnosis skill (copy this to your project)
+  recommend.md            Recommendation generation skill (copy this to your project)
 
 src/
-  cli.ts               # CLI entry point (headless modes for skills)
-  scanner/
-    sessions.ts        # Parse Claude Code session JSONs
-    patterns.ts        # Regex-based workflow pattern detection
-    signals.ts         # Behavioral pain signal detectors
-    implicit.ts        # Fingerprint external system reads
-    installed.ts       # Discover installed tools, MCPs, skills
-    inventory.ts       # Build complete tooling snapshot
-    github.ts          # Enrich tools with GitHub metadata
-  analyzer/
-    diagnosis.ts       # Core diagnosis engine
-    matcher.ts         # Tool-to-pattern recommender
-    readiness.ts       # Tool adoption readiness scoring
-    claude-pipe.ts     # LLM integration
-    sdk-worker.ts      # Subagent worker (Claude Agent SDK)
+  cli.ts                  CLI entry point
+  scanner/                Session data extraction
+    sessions.ts           Parse Claude Code session JSONs
+    patterns.ts           Workflow pattern detection
+    signals.ts            Behavioral pain signal detectors
+    implicit.ts           Infer what external systems you consulted
+    installed.ts          Discover your installed tools, MCPs, skills
+    inventory.ts          Build complete tooling snapshot
+    github.ts             Enrich tools with live GitHub metadata
+  analyzer/               Interpretation and diagnosis
+    diagnosis.ts          Core diagnosis engine
+    matcher.ts            Tool-to-pattern recommender
+    readiness.ts          Tool adoption readiness scoring
   catalog/
-    tools.json         # Structured tool database with pillar scores
+    tools.json            Structured tool database with pillar scores
 
 catalog/
-  potential-solutions.md    # Curated tools, MCPs, CLIs, techniques
-  claude-native.md          # Built-in Claude Code features
-  candidates.json           # Pipeline for new tool additions
-  trusted-curators.json     # Source/curator tracking
+  potential-solutions.md  60+ curated tools, MCPs, CLIs, techniques
+  claude-native.md        Built-in Claude Code features (hooks, memory, skills)
+  candidates.json         Pipeline for new tool additions
+  trusted-curators.json   Source tracking for catalog entries
 
 templates/
-  recommend.html       # HTML report template
+  recommend.html          HTML report template
 ```
-
-## Requirements
-
-- Node.js >= 18
-- Claude Code installed and used (needs session history in `~/.claude/projects/`)
 
 ## License
 
-MIT - see [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
