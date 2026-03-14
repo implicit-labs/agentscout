@@ -3,6 +3,7 @@ dist/
 *.tgz
 
 # AgentScout output artifacts
+.agentscout-answers.json
 agentscout-answers-*.json
 agentscout-recs-*.json
 agentscout-recs-*.html
