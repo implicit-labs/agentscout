@@ -1,0 +1,544 @@
+{
+  "answers": [
+    {
+      "project": "implicit",
+      "json": {
+        "project": "implicit",
+        "engineerPerspective": "iOS/web developer brokering between Railway deployment state, Xcode builds, browser/iOS console logs, Linear issue tracking, and the agent — constantly relaying runtime observations and deployment status the agent cannot see.",
+        "fixableInteractions": [
+          {
+            "title": "Hooks blocking xcodebuild — human becomes the build button",
+            "category": "5a",
+            "interactionSurface": "Xcode build system <-> Agent (blocked by hooks)",
+            "humanRole": "Human manually presses Cmd+R in Xcode because agent's xcodebuild commands are blocked by PreToolUse hooks",
+            "description": "The agent explicitly asked the human to 'Hit Cmd+R in Xcode' because hooks were blocking xcodebuild commands. The human literally becomes the build trigger.",
+            "severity": "critical",
+            "existingToolCheck": "xcodebuild CLI is available, ios-verify skill exists, ios-simulator MCP available — all blocked by PreToolUse:Bash hook (hooksee.sh)",
+            "integration": "Add an exclusion pattern in the PreToolUse:Bash hook for xcodebuild and xcrun commands, or create a dedicated iOS build hook that allows these through",
+            "observableSuccess": "Agent runs xcodebuild directly without human pressing Cmd+R",
+            "whyNotJustJudgment": "Building code is mechanical — the human is not making a design choice, they're pressing a button",
+            "evidence": ["Hit Cmd+R in Xcode... The hooks are blocking my xcodebuild commands but Xcode itself should build fine.", "Are you kidding me? You're so useless..."]
+          },
+          {
+            "title": "Human relays daemon and server logs by copy-paste",
+            "category": "6",
+            "interactionSurface": "Railway logs / daemon.log / browser console <-> Agent",
+            "humanRole": "Human tails daemon logs, reads Railway dashboard, opens browser DevTools, and pastes relevant log lines into Claude Code",
+            "description": "Across multiple sessions, the human ran 'tail -f ~/.implicit/daemon.log' in a separate terminal, read Railway server logs, and inspected browser console — then pasted the output into Claude Code for diagnosis. The agent should read these logs directly.",
+            "severity": "critical",
+            "existingToolCheck": "Railway CLI available in PATH. browser-use MCP available. No daemon log reader. ios-simulator MCP has no console log access.",
+            "integration": "Agent should run `tail -n 50 ~/.implicit/daemon.log` after daemon changes. Use `railway logs` for deployment logs. Use Playwright console_messages for browser logs. Add a post-deployment verification skill.",
+            "observableSuccess": "Human stops pasting log output into the session",
+            "whyNotJustJudgment": "Copy-pasting logs is pure data relay — zero human judgment involved",
+            "evidence": ["i see this:\n\n[hook-bridge] Decision e4b44902... stale (no poll for 7s)", "here is what i am seeing:\n\n(base) implicit git:(feat/imp-210-phase2-hook-relay) tail -f ~/.implicit/daemon.log", "phase 1 testing:\n\n(base) implicit git:(feat/imp-210-daemon) ps aux | grep daemon.js"]
+          },
+          {
+            "title": "Human checks Railway deployment status and relays it",
+            "category": "1",
+            "interactionSurface": "Railway dashboard <-> Agent",
+            "humanRole": "Human checks Railway dashboard, sees pending/complete deployment, types status into Claude Code",
+            "description": "Human repeatedly checked Railway deployment state and told the agent 'we are still waiting for railway' and 'did you push? we need to push for railway to update'. The Railway CLI is in PATH but the agent never used it.",
+            "severity": "high",
+            "existingToolCheck": "Railway CLI is available (clis.railway = true). No Railway MCP server configured.",
+            "integration": "CLAUDE.md rule: 'Railway auto-deploys from git pushes. After pushing, use `railway status` and `railway logs` to verify deployment.' Also document the Railway dev URL.",
+            "observableSuccess": "Agent checks Railway status itself after pushes",
+            "whyNotJustJudgment": "Deployment status is a checkable fact, not a taste call",
+            "evidence": ["we are still waiting for railway. don't distrub this.", "did you push? we need to push for railway to update", "is thsi version uplaoded to railway dev tho>"]
+          },
+          {
+            "title": "Plans should live in Linear issues, not local docs",
+            "category": "5d",
+            "interactionSurface": "Linear issues <-> local docs/plans/",
+            "humanRole": "Human manually cross-references local plan docs with Linear issues and tells agent the convention",
+            "description": "Human instructed: 'check if the plans are in their respective linear issues as a comment or desc. this is the way we are doing it. if yes, then delete. if not, then update the lienar issue with the plan please.' The Linear MCP exists but the agent doesn't enforce this convention.",
+            "severity": "high",
+            "existingToolCheck": "Linear MCP available and working. linear-archive skill exists. Neither enforces plans-in-Linear convention.",
+            "integration": "CLAUDE.md rule: 'Plans and specs must live as comments/descriptions on their Linear issue (not as local docs). When creating a plan, always attach it to the relevant Linear issue. When finding a local plan doc, check if it exists in Linear and sync.'",
+            "observableSuccess": "Agent automatically checks Linear when encountering plan docs",
+            "whyNotJustJudgment": "This is a documented convention the agent should follow, not a judgment call",
+            "evidence": ["check if the plans are in their respective linear issues as a comment or desc. this is the way we are doing it."]
+          },
+          {
+            "title": "Inter-session context loss from context window exhaustion",
+            "category": "7",
+            "interactionSurface": "Previous Claude Code session <-> new session",
+            "humanRole": "Human manually copy-pastes context summaries and last messages between sessions",
+            "description": "Multiple context window exhaustions forced the human to manually relay prior session state. Human pasted 'latets msg:' followed by the agent's own prior output. Pure mechanical memory bridge.",
+            "severity": "high",
+            "existingToolCheck": "No tooling for automatic session continuity exists.",
+            "integration": "A pre-session hook or skill that reads the last N messages from the prior session's transcript file and auto-loads them as context.",
+            "observableSuccess": "Human stops pasting 'This session is being continued from a previous conversation'",
+            "whyNotJustJudgment": "Copy-pasting the agent's own output back to it is zero-judgment mechanical relay",
+            "evidence": ["This session is being continued from a previous conversation that ran out of context.", "latets msg:\n⏺ Created docs/LOGGING.md with the full audit."]
+          }
+        ],
+        "implicitFindings": [
+          {
+            "title": "Repeated 10-minute polling gaps for deployment/daemon status",
+            "relayPattern": "Human checks Railway dashboard / daemon logs → returns with status update",
+            "systemBrokered": "Railway deployment platform, local daemon",
+            "category": "6",
+            "severity": "high",
+            "confidence": "high",
+            "integration": "Post-push hook that runs `railway status` and daemon health check automatically",
+            "evidence": ["270 activity gaps totaling ~2955 minutes", "Repeated 10-minute gaps starting around 2026-03-14T02:09"]
+          }
+        ],
+        "systemsHumanBrokered": ["Railway deployment platform", "Linear issue tracking", "Xcode IDE", "Browser DevTools console", "iOS app runtime", "Local daemon (~/.implicit/daemon.log)", "Local dev server (port 3000)", "Previous Claude Code session", "Playwright browser cache"],
+        "rawUserVoice": [
+          {"quote": "Are you kidding me? You're so useless.", "type": "frustration"},
+          {"quote": "all these tools that I gave you, and you don't even use any of them", "type": "frustration"},
+          {"quote": "did you push? we need to push for railway to update", "type": "re-explanation"},
+          {"quote": "is thsi version uplaoded to railway dev tho>", "type": "anger-typo"},
+          {"quote": "don't distrub this", "type": "anger-typo"},
+          {"quote": "I'm actually not on the TestFlight but instead I'm on the Capacitor build", "type": "correction"},
+          {"quote": "i don't want to delete docs, but the current set is WAYY too bloated", "type": "frustration"},
+          {"quote": "1 and 3 please give me a list of what you are going to remove first tho", "type": "correction"},
+          {"quote": "latets msg:", "type": "re-explanation"},
+          {"quote": "check if the plans are in their respective linear issues", "type": "re-explanation"},
+          {"quote": "update the lienar issue with the plan please", "type": "anger-typo"},
+          {"quote": "come up with an intermediate udpate to the logging doc", "type": "anger-typo"},
+          {"quote": "please search for someone who has hacked around this or if there is a way we can work aroudnt his", "type": "anger-typo"},
+          {"quote": "kill the client you spun up. there is no reason to do this", "type": "correction"},
+          {"quote": "i ahve a web client and an iOS client on this account", "type": "anger-typo"},
+          {"quote": "yes let's create a new lienar issue", "type": "anger-typo"}
+        ],
+        "nonFixableJudgment": ["Documentation consolidation priorities", "Linear issue scoping", "What features to build next"],
+        "commodityToIgnore": ["Port management (lsof/kill)", "Playwright lock file cleanup"],
+        "confidenceNotes": ["rawUserMessages truncated at 200 chars", "2955 gap minutes suggest extensive off-session work"]
+      }
+    },
+    {
+      "project": "primitive",
+      "json": {
+        "project": "primitive",
+        "engineerPerspective": "iOS developer building an audio-first information app. Tests in simulator, pastes logs, shares URLs from X/Twitter, manually relays content between external systems and Claude Code. The ios-simulator MCP exists but is consistently unused.",
+        "fixableInteractions": [
+          {
+            "title": "Human manually screenshots iOS simulator and pastes into session",
+            "category": "5d",
+            "interactionSurface": "iOS Simulator <-> Agent (brokered by human camera relay)",
+            "humanRole": "Takes screenshots of running app and shares them as image files",
+            "description": "The ios-simulator MCP has screenshot capability. The ios-verify skill exists. But the agent never used either — the human manually screenshotted and shared /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png.",
+            "severity": "high",
+            "existingToolCheck": "ios-simulator MCP: screenshot, ui_describe_all, ui_tap, ui_swipe all available. ios-verify skill available. CLAUDE.md lists ios-verify for .xcodeproj projects. None used.",
+            "integration": "CLAUDE.md rule: 'After building and launching an iOS app, use ios-simulator MCP to screenshot and ui_describe_all to verify the UI before presenting results.'",
+            "observableSuccess": "Agent takes its own simulator screenshots instead of human sharing Downloads/*.png",
+            "whyNotJustJudgment": "Screenshotting a simulator is a mechanical action the MCP already supports",
+            "evidence": ["[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png]"]
+          },
+          {
+            "title": "Human pastes Xcode console logs (TCP errors, XPC interruptions)",
+            "category": "2",
+            "interactionSurface": "Xcode Console <-> Agent",
+            "humanRole": "Reads Xcode console, mentally filters to relevant errors, pastes into Claude Code",
+            "description": "Human pasted raw TCP errors, XPC interruption logs, and Supabase realtime subscription issues from the Xcode console. No tool exists to stream iOS app runtime logs.",
+            "severity": "critical",
+            "existingToolCheck": "ios-simulator MCP has no console/log capture. xcrun available. No simctl log streaming configured.",
+            "integration": "Agent should run `xcrun simctl spawn booted log stream --predicate 'subsystem == \"com.app.primitive\"' --timeout 10` to capture runtime logs after launching.",
+            "observableSuccess": "Agent reads simulator logs directly instead of human pasting from Xcode console",
+            "whyNotJustJudgment": "Copying log output is pure data relay",
+            "evidence": ["tcp_output [C1.1.2:3] flags=[R.] seq=2312391547, ack=3897099007...", "i am seeing some of these errors and the core functionality doesn't work"]
+          },
+          {
+            "title": "Human manually loads skills that should auto-trigger",
+            "category": "5b",
+            "interactionSurface": "Skill system <-> Agent",
+            "humanRole": "Pastes full skill content into the session because agent didn't auto-invoke",
+            "description": "Human manually loaded x-research, swiftui, and systematic-debugging skills by pasting their content. All three exist in the inventory but weren't auto-triggered.",
+            "severity": "med",
+            "existingToolCheck": "x-research, swiftui-expert-skill, and systematic-debugging all exist in skills[]. CLAUDE.md auto-use list does not include x-research or swiftui.",
+            "integration": "Add to CLAUDE.md auto-use list: 'x-research: when user shares X/Twitter URLs. swiftui: when editing .swift files with SwiftUI imports. systematic-debugging: when encountering runtime errors.'",
+            "observableSuccess": "Agent invokes these skills automatically without human pasting them",
+            "whyNotJustJudgment": "Skill loading is a lookup operation, not a judgment call",
+            "evidence": ["Base directory for this skill: /Users/tomaitagaki/.claude/skills/x-research", "Base directory for this skill: /Users/tomaitagaki/.claude/skills/swiftui"]
+          },
+          {
+            "title": "Human reports UI bugs found by manual simulator testing",
+            "category": "6",
+            "interactionSurface": "iOS Simulator runtime <-> Agent",
+            "humanRole": "Manually tests swipe gestures, keyboard interactions, TTS playback in simulator and reports bugs",
+            "description": "Human provided a multi-item bug report after extensive manual testing: swipe state bugs, textbox positioning relative to keyboard, TTS-to-card sync issues. The ios-simulator MCP can automate tap/swipe testing.",
+            "severity": "critical",
+            "existingToolCheck": "ios-simulator MCP has ui_tap, ui_swipe, screenshot. ios-verify skill exists. maestro CLI not in PATH.",
+            "integration": "After building and launching, agent should run a basic smoke test: screenshot, ui_describe_all, swipe through cards, screenshot again. This catches layout bugs and state issues.",
+            "observableSuccess": "Agent catches UI bugs before human finds them through manual testing",
+            "whyNotJustJudgment": "Swipe state bugs and keyboard overlap are functional bugs, not aesthetic preferences",
+            "evidence": ["the textbox UI is not great. fix this to be next to the keyboard naturally", "Okay I think I have a lot of thoughts. This app is very good.\n1. There needs to be a full audit on the swipe mechanism..."]
+          }
+        ],
+        "implicitFindings": [
+          {
+            "title": "445 minutes of activity gaps — mostly manual iOS testing",
+            "relayPattern": "Agent edits code → human tests in simulator (5-48 min gaps) → human returns with bug reports",
+            "systemBrokered": "iOS Simulator / Xcode",
+            "category": "6",
+            "severity": "high",
+            "confidence": "med",
+            "integration": "Auto-verify loop: build → launch → screenshot → ui_describe_all → present to human for approval",
+            "evidence": ["445 total gap minutes", "Multiple gaps correlate with subsequent bug report messages"]
+          }
+        ],
+        "systemsHumanBrokered": ["iOS Simulator", "X/Twitter", "Xcode Console", "Claude Code Session Memory", "Skill Definitions (local filesystem)", "Calendly", "Notion"],
+        "rawUserVoice": [
+          {"quote": "dude the video needs to be from the X post i gvae you", "type": "frustration"},
+          {"quote": "wait ignore the last message its this lin:", "type": "correction"},
+          {"quote": "why can't we play the video? do we need some kind of auth system?", "type": "frustration"},
+          {"quote": "commit very concisely", "type": "re-explanation"},
+          {"quote": "i am seeing some of these errors and the core functionality doesn't work", "type": "frustration"},
+          {"quote": "the textbox UI is not great. fix this to be next to the keyboard naturally", "type": "correction"}
+        ],
+        "nonFixableJudgment": ["Stack vs swipe UX architecture", "Voice-to-intent pipeline design", "TTS content rewriting for audio"],
+        "commodityToIgnore": ["Git commit/push/PR operations"],
+        "confidenceNotes": ["TTS audio sync bugs cannot be detected by any existing tool — requires human auditory judgment"]
+      }
+    },
+    {
+      "project": "agentscout",
+      "json": {
+        "project": "agentscout",
+        "engineerPerspective": "Engineer building AgentScout itself — meta-tool for diagnosing Claude Code usage. Human orchestrates the CLI pipeline (emit-prompts → subagents → apply-answers), relays external context from stakeholders and X/Twitter, and shepherds stop hook checkpoints.",
+        "fixableInteractions": [
+          {
+            "title": "Human manually pipes CLI stages (emit-prompts → apply-answers)",
+            "category": "3",
+            "interactionSurface": "agentscout CLI stages <-> Agent",
+            "humanRole": "Runs CLI commands, cats output files, pipes between stages",
+            "description": "Every /diagnose run requires manual: (1) node dist/cli.js --emit-prompts, (2) cat output files, (3) feed to subagents, (4) cat subagent outputs, (5) pipe to --apply-answers. The human is the shell script.",
+            "severity": "high",
+            "existingToolCheck": "The /diagnose command IS the orchestrator — but it delegates plumbing to the human instead of chaining steps internally.",
+            "integration": "The /diagnose command should chain these steps: emit-prompts → split briefs → spawn subagents → collect results → apply-answers. The human should only see the final output.",
+            "observableSuccess": "Human runs /diagnose once and gets results without manual cat/pipe commands",
+            "whyNotJustJudgment": "Pipeline plumbing is deterministic shell work",
+            "evidence": ["AGENTSCOUT_LLM_PROJECT_LIMIT=10 node dist/cli.js --emit-prompts", "cat agentscout-answers-20260313T124629.json | node dist/cli.js --apply-answers"]
+          },
+          {
+            "title": "Agent used wrong path for x-research skill",
+            "category": "2",
+            "interactionSurface": "Local filesystem (skill paths) <-> Agent",
+            "humanRole": "Had to help agent find the correct skill path after multiple failures",
+            "description": "Agent tried ~/clawd/skills/x-research (wrong) instead of the registered path in inventory. Multiple retries with find commands before finding the correct path at /Users/tomaitagaki/dotfiles/claude/.claude/skills/x-research/.",
+            "severity": "high",
+            "existingToolCheck": "x-research skill path is in the inventory at /Users/tomaitagaki/.claude/skills/x-research. Agent should resolve paths from skills[] array.",
+            "integration": "Skills should be invoked through the Skill tool (which resolves paths automatically) rather than manually constructing bash commands with guessed paths.",
+            "observableSuccess": "Agent never guesses skill paths — always uses the Skill tool or reads from inventory",
+            "whyNotJustJudgment": "Path resolution is deterministic lookup, not judgment",
+            "evidence": ["cd ~/clawd/skills/x-research && bun run x-search.ts search...", "find ~ -maxdepth 4 -name \"x-search.ts\" -type f"]
+          },
+          {
+            "title": "Supabase config messed up across projects",
+            "category": "5a",
+            "interactionSurface": "Supabase project configs <-> Agent",
+            "humanRole": "Human inspected Supabase state externally and reported config issues",
+            "description": "Human observed '#1 is messing up my supabase config across multiple project configs so i should fix this' — the global Supabase MCP points to one project_ref but multiple projects exist.",
+            "severity": "med",
+            "existingToolCheck": "Supabase MCP configured globally with project_ref=hhlvdrxespkkjkzfjmal. supabase CLI available. Neither used to validate cross-project configs.",
+            "integration": "Agent should use supabase CLI to list projects and verify the MCP config matches the current project context.",
+            "observableSuccess": "Agent detects and warns about Supabase config mismatches",
+            "whyNotJustJudgment": "Config validation is a checkable fact",
+            "evidence": ["#1 is messing up my supabase config across multiple project configs so i should fix this"]
+          }
+        ],
+        "implicitFindings": [
+          {
+            "title": "Stop hook checkpoint shepherding (5-min gap cluster)",
+            "relayPattern": "Subagent completes → stop hook fires → human reviews → continues",
+            "systemBrokered": "Stop hook checkpoint system",
+            "category": "7",
+            "severity": "med",
+            "confidence": "high",
+            "integration": "Trusted pipeline mode: auto-continue for known /diagnose subagent completions",
+            "evidence": ["Seven consecutive 5-8min gaps between 19:49 and 20:23 on March 13"]
+          }
+        ],
+        "systemsHumanBrokered": ["agentscout CLI pipeline", "X/Twitter", "External conversations (stakeholders)", "GitHub repos", "Supabase configs", "Browser (HTML report viewing)", "Arc browser (auth state)"],
+        "rawUserVoice": [
+          {"quote": "ok can we go through my X bookrmakrs", "type": "anger-typo"},
+          {"quote": "can you use arc browser instead of chrome i am not logged in there", "type": "correction"},
+          {"quote": "a bit better visualization. this will be used as the visual aid for mr presentation where i xp[lain how it works", "type": "anger-typo"},
+          {"quote": "#1 is messing up my supabase config across multiple project configs", "type": "frustration"}
+        ],
+        "nonFixableJudgment": ["Product naming (stakeholder feedback)", "Presentation flow design", "Demo selection"],
+        "commodityToIgnore": ["Timestamped filename generation"],
+        "confidenceNotes": ["Self-referential project — some interventions are dogfooding, not workflow friction"]
+      }
+    },
+    {
+      "project": "landing",
+      "json": {
+        "project": "landing",
+        "engineerPerspective": "Building a landing page. Sessions devolved into a prolonged font-matching ordeal where the human acted as the visual comparator between localhost and implicit.cc, repeatedly correcting the agent's font identification. 75% of interventions were the human being the diff engine between two browser tabs.",
+        "fixableInteractions": [
+          {
+            "title": "Agent cannot visually compare two live sites",
+            "category": "5d",
+            "interactionSurface": "Browser (localhost:3001) + Browser (implicit.cc) <-> Agent",
+            "humanRole": "Switches between two browser tabs comparing fonts, identifies mismatches, tells agent which element has which font",
+            "description": "12 of 16 interventions were the human acting as a visual comparison bridge. The agent has Playwright but never used it to screenshot both URLs and compare computed styles. User eventually told the agent to use Playwright explicitly.",
+            "severity": "critical",
+            "existingToolCheck": "Playwright plugin available. gstack-browser-use skill available. Neither was used until the user demanded it. Even then, the agent failed to correctly identify the target element.",
+            "integration": "CLAUDE.md rule: 'When matching visual styles from a reference URL, use Playwright to: (1) screenshot both URLs, (2) extract computed styles from target elements via browser_evaluate, (3) compare and apply. Never guess fonts — always verify programmatically.'",
+            "observableSuccess": "Agent screenshots both sites and extracts computed styles without human tab-switching",
+            "whyNotJustJudgment": "Font IDENTIFICATION is a verifiable fact. Font CHOICE is judgment. The agent was failing at identification.",
+            "evidence": ["nope dude. use playwright.\n\n1. checkout http://localhost:3001 and confirm that you are messing up\n2. checkout implicit.cc", "dude im telling you its NOT\n\nclass=\"text-implicit-cream\"", "it's quite incredible how incompetent you are."]
+          },
+          {
+            "title": "Agent failed to read reference codebase for CSS classes",
+            "category": "5d",
+            "interactionSurface": "implicit-landing codebase <-> Agent",
+            "humanRole": "Manually inspected the implicit-landing source files and told agent the correct CSS class name",
+            "description": "The implicit-landing project exists locally. The agent could Read files from it. Instead, the human had to manually identify class='text-implicit-cream' and tell the agent to copy it.",
+            "severity": "critical",
+            "existingToolCheck": "codebase-explore skill available. Read tool available. Agent could access /Users/tomaitagaki/Documents/implicit/implicit-landing/ directly.",
+            "integration": "When told to match styles from another project, agent should Read the reference project's CSS/tailwind config directly.",
+            "observableSuccess": "Agent reads reference codebase CSS without human looking up class names",
+            "whyNotJustJudgment": "Reading a CSS class name from a file is lookup, not taste",
+            "evidence": ["dude im telling you its NOT\n\nclass=\"text-implicit-cream\"\n\nfirst copy the classes from implicit-landing. and then use them here."]
+          }
+        ],
+        "implicitFindings": [
+          {
+            "title": "Activity gaps correlate with browser comparison sessions",
+            "relayPattern": "Agent makes CSS change → human checks both browser tabs (gap) → returns with correction",
+            "systemBrokered": "Two browser tabs (localhost + implicit.cc)",
+            "category": "6",
+            "severity": "med",
+            "confidence": "med",
+            "integration": "Auto-screenshot localhost after CSS changes and present inline",
+            "evidence": ["8min gap, 10min gap during the font saga"]
+          }
+        ],
+        "systemsHumanBrokered": ["Browser (localhost:3001)", "Browser (implicit.cc)", "Terminal (separate shell for npm run dev)", "implicit-landing codebase", "GitHub"],
+        "rawUserVoice": [
+          {"quote": "no this was NOT the original font", "type": "correction"},
+          {"quote": "nope dude. use playwright.", "type": "frustration"},
+          {"quote": "dude im telling you its NOT\n\nclass=\"text-implicit-cream\"", "type": "frustration"},
+          {"quote": "it's quite incredible how incompetent you are.", "type": "frustration"},
+          {"quote": "THIS NEEDS TO BE THE SAME FONT AS THE INFROMATION DEALT JUST RIGHT\n\nITYS THAT ...", "type": "frustration"},
+          {"quote": "SUBTITLE??????? ARE YOU KIDDING ME?", "type": "frustration"},
+          {"quote": "THIS THIS HTIS HTIS ??????", "type": "frustration"},
+          {"quote": "yes ...", "type": "frustration"},
+          {"quote": "honestly please revert back to the commit you are so usekess", "type": "giving-up"}
+        ],
+        "nonFixableJudgment": ["Font pairing choice (sans headers + garamond body)", "Typography system architecture"],
+        "commodityToIgnore": [],
+        "confidenceNotes": ["75% of interventions are visual comparison relay — single highest-leverage automation in any project"]
+      }
+    },
+    {
+      "project": "pack",
+      "json": {
+        "project": "pack",
+        "engineerPerspective": "Building trading-card/pack reveal UI in React. Human acts as visual QA, inter-agent context bridge, and git traffic controller across worktrees. 10+ interrupts indicate frequent agent misdirection.",
+        "fixableInteractions": [
+          {
+            "title": "Human is visual QA layer for rendered React components",
+            "category": "6",
+            "interactionSurface": "Browser (rendered UI) <-> Agent",
+            "humanRole": "Inspects rendered output, finds text layout bugs, reports missing elements",
+            "description": "Human reported 'rn i see implicit/implicit/booster pack instead of implicit/booster pack/series one' and 'why is the line down the middle still there'. Playwright and browser-use MCP both available but unused.",
+            "severity": "critical",
+            "existingToolCheck": "Playwright plugin available. browser-use MCP available. gstack-browser-use skill available. None used for visual verification.",
+            "integration": "After making UI changes, use Playwright to screenshot and inspect DOM text nodes",
+            "observableSuccess": "Agent catches text layout issues before human reports them",
+            "whyNotJustJudgment": "Wrong text content and unwanted visual elements are bugs, not preferences",
+            "evidence": ["rn i see implicit/implicit/booster pack instead of implicit/booster pack/series one", "why is the line down the middle still there and the circle at the top missing?"]
+          },
+          {
+            "title": "Human carries context between two Claude Code agents",
+            "category": "7",
+            "interactionSurface": "Agent A (this session) <-> Agent B (other session), brokered by human",
+            "humanRole": "Extracts file paths and config details from Agent A, manually relays to Agent B. When Agent B fails, returns to Agent A for more precise instructions.",
+            "description": "Human asked 'tell me the exact place to find the code for the kith version. my agent is not replicating it correctly' and 'how do i explain to the other agent'. Triple-hop relay: app → human → agent A → doc → human → agent B.",
+            "severity": "critical",
+            "existingToolCheck": "No cross-agent context sharing mechanism exists. codebase-explore skill could help the other agent find code, but there's no handoff protocol.",
+            "integration": "Create a cross-agent handoff doc standard: when asked to help another agent replicate work, produce a self-contained .md file with file paths, config keys, expected visual output, and verification steps.",
+            "observableSuccess": "Agent produces handoff docs that other agents can consume without human relay",
+            "whyNotJustJudgment": "Information relay between agents is pure mechanical context passing",
+            "evidence": ["tell me the exact place to find the code for the kith version. my agent is not replicating it correctly", "how do i explain to the other agent", "cool can we make a doc to give to other agents who might want to use these components"]
+          },
+          {
+            "title": "Agent confused about git branches in worktrees",
+            "category": "2",
+            "interactionSurface": "Git worktree state <-> Agent",
+            "humanRole": "Caught branch/worktree mismatches and corrected agent twice",
+            "description": "Human asked 'if we are in this worktree shouldn't we be in the twitter foil branch?' and then had to say 'no go back to twitter branch' when agent went to wrong branch again.",
+            "severity": "high",
+            "existingToolCheck": "git CLI available. CLAUDE.md has git workflow rules but no worktree-branch mapping.",
+            "integration": "CLAUDE.md rule: 'When working in a worktree, always verify the branch matches the expected worktree branch before making changes.'",
+            "observableSuccess": "Agent checks branch in worktree before making changes",
+            "whyNotJustJudgment": "Being on the wrong branch is a factual error",
+            "evidence": ["if we are in this worktree shouldn't we be in the twitter foil branch?", "no go back to twitter branch"]
+          }
+        ],
+        "implicitFindings": [
+          {
+            "title": "10-11 min gaps during inter-agent relay",
+            "relayPattern": "Human leaves to work with Agent B → returns to Agent A when B fails",
+            "systemBrokered": "Other Claude Code agent session",
+            "category": "7",
+            "severity": "med",
+            "confidence": "med",
+            "integration": "Self-contained handoff artifacts that reduce round-trips",
+            "evidence": ["10min gap, 11min gap correlating with 'my agent is not replicating it correctly'"]
+          }
+        ],
+        "systemsHumanBrokered": ["Browser (rendered UI)", "Other Claude Code agent session", "Git branches/worktrees", "Dev server processes"],
+        "rawUserVoice": [
+          {"quote": "why is the line down the middle still there and the circle at the top missing?", "type": "frustration"},
+          {"quote": "how do i explain to the other agent", "type": "frustration"},
+          {"quote": "tell me the exact place to find the code for the kith version. my agent is not replicating it correctly", "type": "frustration"},
+          {"quote": "if we are in this worktree shouldn't we be in the twitter foil branch?", "type": "correction"},
+          {"quote": "no go back to twitter branch", "type": "repeated-request"}
+        ],
+        "nonFixableJudgment": ["Component variant selection (trapezoid pack)", "UI flow sequencing", "Plan authoring"],
+        "commodityToIgnore": ["Worktree cleanup commands"],
+        "confidenceNotes": ["High confidence on inter-agent relay — quotes are unambiguous"]
+      }
+    },
+    {
+      "project": "Documents",
+      "json": {
+        "project": "Documents",
+        "engineerPerspective": "Wrestling with Symphony (Elixir-based orchestrator) setup and debugging. Human pastes Symphony dashboard output 5+ times because agent cannot see external dashboard state.",
+        "fixableInteractions": [
+          {
+            "title": "Human relays Symphony dashboard output 5+ times",
+            "category": "1",
+            "interactionSurface": "Symphony dashboard <-> Agent",
+            "humanRole": "Copies dashboard output (status, throughput, backoff queue, rate limits) and pastes into Claude Code",
+            "description": "Human pasted '⏺ SYMPHONY STATUS' output 5 times for diagnosis. Agent has no way to query Symphony directly.",
+            "severity": "high",
+            "existingToolCheck": "No Symphony MCP server. No CLI wrapper. linear MCP exists but doesn't cover Symphony.",
+            "integration": "If Symphony exposes an API or log files, a CLI wrapper or MCP server would let the agent query status directly.",
+            "observableSuccess": "Agent checks Symphony status without human pasting dashboard text",
+            "whyNotJustJudgment": "Copy-pasting dashboard output is data relay",
+            "evidence": ["is the project url correct:\n\n⏺ SYMPHONY STATUS\n│ Agents: 0/1", "what is happening:\n\n⏺ SYMPHONY STATUS\n│ Agents: 1/1\n│ Throughput: 0 tps", "what should i do with this:\n\n⏺ SYMPHONY STATUS\n│ Tokens: in 44,715,900"]
+          }
+        ],
+        "implicitFindings": [],
+        "systemsHumanBrokered": ["Symphony Elixir dashboard", "Linear API", "Codex runtime"],
+        "rawUserVoice": [
+          {"quote": "i did source zsrhc is there another command to use>?", "type": "frustration"},
+          {"quote": "still no good", "type": "rejection"},
+          {"quote": "nope no good", "type": "rejection"},
+          {"quote": "what is happening", "type": "frustration"},
+          {"quote": "what should i do with this", "type": "frustration"}
+        ],
+        "nonFixableJudgment": [],
+        "commodityToIgnore": [],
+        "confidenceNotes": ["High confidence on Symphony relay — 5 pastes is unambiguous"]
+      }
+    },
+    {
+      "project": "cli",
+      "json": {
+        "project": "cli",
+        "engineerPerspective": "Fixing a Capacitor iOS build header bug. Agent used web Playwright instead of iOS verification tools, completely missing the platform-specific bug.",
+        "fixableInteractions": [
+          {
+            "title": "Agent verified on web when bug was iOS-specific",
+            "category": "5d",
+            "interactionSurface": "iOS Simulator/device <-> Agent (used wrong verification platform)",
+            "humanRole": "Tested on iOS, found agent's fix didn't work, provided screenshot proof",
+            "description": "Agent used Playwright (web) to verify a fix that only manifested in the Capacitor iOS viewport. Human had to provide a screenshot showing the scroll bleed-through was still present on iOS.",
+            "severity": "high",
+            "existingToolCheck": "ios-simulator MCP available with screenshot, ui_describe_all. ios-verify skill exists. xcodebuild and xcrun available. CLAUDE.md lists ios-verify for .xcodeproj projects. Agent used web Playwright instead.",
+            "integration": "CLAUDE.md rule: 'When fixing Capacitor/iOS bugs, verify on ios-simulator MCP, not web Playwright. The native viewport behaves differently.'",
+            "observableSuccess": "Agent verifies iOS fixes using ios-simulator MCP instead of web Playwright",
+            "whyNotJustJudgment": "Wrong verification platform is a factual error",
+            "evidence": ["idek what you changed because you dind't fix this but in the capacitor build (ios where the headers are more like a phone shape", "[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-03-08 at 19.51.39.png]"]
+          }
+        ],
+        "implicitFindings": [],
+        "systemsHumanBrokered": ["iOS device/simulator", "Screenshot capture"],
+        "rawUserVoice": [
+          {"quote": "idek what you changed because you dind't fix this", "type": "frustration"},
+          {"quote": "the video recording doidn't get to this point", "type": "anger-typo"},
+          {"quote": "where is the video", "type": "frustration"}
+        ],
+        "nonFixableJudgment": [],
+        "commodityToIgnore": [],
+        "confidenceNotes": ["Only 1 session but core pattern is clear: wrong verification platform"]
+      }
+    },
+    {
+      "project": "website",
+      "json": {
+        "project": "website",
+        "engineerPerspective": "Maintaining a Jekyll personal website. Ruby environment issues and deployment status checking are the main frictions.",
+        "fixableInteractions": [
+          {
+            "title": "Agent staged junk files violating CLAUDE.md",
+            "category": "5b",
+            "interactionSurface": "Git staging <-> Agent",
+            "humanRole": "Told agent to unstage unwanted files (.claude/hooks, .ruby-version)",
+            "description": "Agent staged dotfiles and Ruby config that shouldn't be committed. CLAUDE.md already says 'prefer adding specific files by name' — agent violated this rule.",
+            "severity": "med",
+            "existingToolCheck": "CLAUDE.md has the rule. Agent ignored it.",
+            "integration": "Add .gitignore entries for .claude/ and .ruby-version, or reinforce the CLAUDE.md staging rule",
+            "observableSuccess": "Agent never stages dotfiles or env config",
+            "whyNotJustJudgment": "Following documented rules is not judgment",
+            "evidence": ["unstage the junk yes and push to a new branch"]
+          }
+        ],
+        "implicitFindings": [],
+        "systemsHumanBrokered": ["GitHub Pages deployment", "Local browser preview", "Ruby/gem environment"],
+        "rawUserVoice": [
+          {"quote": "how can i see this?", "type": "frustration"},
+          {"quote": "is my website updated on live?", "type": "repeated-request"},
+          {"quote": "unstage the junk yes", "type": "correction"}
+        ],
+        "nonFixableJudgment": ["Content copy updates", "Feature toggling (audio/transcript)"],
+        "commodityToIgnore": ["Ruby environment setup"],
+        "confidenceNotes": ["Lower severity overall — standard dev workflow friction"]
+      }
+    },
+    {
+      "project": "capacitor",
+      "json": {
+        "project": "capacitor",
+        "engineerPerspective": "Building Capacitor iOS wrapper. Main friction: hooks not firing, terminal output relay, and Xcode build error pasting.",
+        "fixableInteractions": [
+          {
+            "title": "Hooks not firing on Stop events",
+            "category": "5a",
+            "interactionSurface": "Hook system <-> Agent",
+            "humanRole": "Noticed hooks didn't fire, reported twice, debugged the system",
+            "description": "Human said 'the hooks are not working...' and 'so you just stopped, but didn't fire the hook. what happened??' — the Stop hook with implicit hook-handler.sh was configured but failed to fire.",
+            "severity": "med",
+            "existingToolCheck": "Stop hook configured with implicit hook-handler.sh and 660s timeout pointing to Railway endpoint.",
+            "integration": "Diagnose hook-handler.sh connectivity to the Railway endpoint. May be a timeout or networking issue.",
+            "observableSuccess": "Stop hooks fire reliably",
+            "whyNotJustJudgment": "System malfunction",
+            "evidence": ["the hooks are not working...", "so you just stopped, but didn't fire the hook. what happened??"]
+          },
+          {
+            "title": "Human pastes Xcode build errors from separate terminal",
+            "category": "5d",
+            "interactionSurface": "Xcode build errors <-> Agent",
+            "humanRole": "Runs Capacitor commands in a separate terminal, copies Xcode errors, pastes into session",
+            "description": "Human pasted Xcode build errors that xcodebuild CLI could have captured directly within the session.",
+            "severity": "med",
+            "existingToolCheck": "xcodebuild available. ios-simulator MCP available. Agent could run these directly.",
+            "integration": "Agent should run Capacitor build commands within its own session instead of having user relay from another terminal.",
+            "observableSuccess": "Agent runs cap build and captures errors directly",
+            "whyNotJustJudgment": "Error relay is data transfer",
+            "evidence": ["Unable to open base configuration reference file", "in client-ios\n\n(base) ➜  client-ios git:(feat/imp-182-capacitor-ios) pnpm open"]
+          }
+        ],
+        "implicitFindings": [],
+        "systemsHumanBrokered": ["Terminal (Capacitor CLI)", "Xcode build errors", "iOS Simulator", "Hook system"],
+        "rawUserVoice": [
+          {"quote": "why is the app icon the capacitor app icon? this is not what i want/", "type": "frustration"},
+          {"quote": "the hooks are not working...", "type": "frustration"},
+          {"quote": "so you just stopped, but didn't fire the hook. what happened??", "type": "frustration"},
+          {"quote": "just write the PR and then update 182", "type": "giving-up"}
+        ],
+        "nonFixableJudgment": ["PR scope/timing decisions"],
+        "commodityToIgnore": ["Multi-terminal dev workflow learning"],
+        "confidenceNotes": ["Low overall pain (10) — most issues are standard iOS dev learning curve"]
+      }
+    }
+  ]
+}
