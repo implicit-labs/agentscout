@@ -4,27 +4,18 @@ Analyzes your Claude Code sessions to find where you're doing work the agent cou
 
 ## Install
 
-Requires Node.js >= 18 and Claude Code (needs session history in `~/.claude/projects/`).
-
 ```bash
-npm install -g agentscout
+npm install -g @implicit-ai/agentscout
 ```
 
-Or from source:
+Then copy the skill files into any project you want to diagnose:
 
 ```bash
-git clone https://github.com/implicit-labs/agentscout.git
-cd agentscout
-npm install && npm run build
+mkdir -p .claude/commands
+cp $(npm root -g)/@implicit-ai/agentscout/.claude/commands/*.md .claude/commands/
 ```
 
-Copy the skills into your project:
-
-```bash
-mkdir -p /path/to/your/project/.claude/commands
-cp .claude/commands/diagnose.md /path/to/your/project/.claude/commands/
-cp .claude/commands/recommend.md /path/to/your/project/.claude/commands/
-```
+That's it. Open Claude Code in that project and run `/diagnose`.
 
 ## Token Usage Warning
 
@@ -90,17 +81,8 @@ The tool catalog is fetched from GitHub at runtime and cached locally for 24 hou
 ## Update
 
 ```bash
-npm update -g agentscout
+npm update -g @implicit-ai/agentscout
 ```
-
-Or from source:
-
-```bash
-cd agentscout
-git pull && npm install && npm run build
-```
-
-Then re-copy the skill files to your projects.
 
 ## License
 
