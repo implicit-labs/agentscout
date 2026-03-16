@@ -439,7 +439,7 @@ After pushing to feature branches:
 
 ## Active Decisions
 - iOS is deployed via Capacitor through Xcode to physical device, NOT TestFlight
-- Hook relay goes through Railway endpoint at implicit-development.up.railway.app
+- Hook relay goes through Railway endpoint at <project>.up.railway.app
 - Browser preference: use Arc for authenticated sessions (user is not logged in on Chrome)
 
 ## What NOT To Do
@@ -544,7 +544,7 @@ fi</pre>
     </details>
     <div class="evidence">
       <span class="evidence-label">Evidence:</span>
-      "Base directory for this skill: /Users/tomaitagaki/.claude/skills/x-research" (human pasted full skill) | "Base directory for this skill: /Users/tomaitagaki/.claude/skills/swiftui" (human pasted full skill)
+      "Base directory for this skill: /Users/user/.claude/skills/x-research" (human pasted full skill) | "Base directory for this skill: /Users/user/.claude/skills/swiftui" (human pasted full skill)
     </div>
   </div>
 
@@ -573,7 +573,7 @@ fi</pre>
       </div>
     </div>
     <div class="rec-body">
-      <p>The global Supabase MCP is configured with <code>project_ref=hhlvdrxespkkjkzfjmal</code>, which works for one project but conflicts when working in other Implicit projects. The human observed "#1 is messing up my supabase config across multiple project configs so i should fix this." The fix is to use project-level <code>.claude/settings.local.json</code> overrides for each project that needs a different Supabase project_ref.</p>
+      <p>The global Supabase MCP is configured with <code>project_ref=<project_ref></code>, which works for one project but conflicts when working in other Implicit projects. The human observed "#1 is messing up my supabase config across multiple project configs so i should fix this." The fix is to use project-level <code>.claude/settings.local.json</code> overrides for each project that needs a different Supabase project_ref.</p>
     </div>
     <div class="evidence">
       <span class="evidence-label">Evidence:</span>
@@ -653,7 +653,7 @@ fi</pre>
     </details>
     <div class="evidence">
       <span class="evidence-label">Evidence:</span>
-      "[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png]" (human shared manual screenshot) | "idek what you changed because you dind't fix this but in the capacitor build"
+      "[Image: source: /Users/user/Downloads/Screenshot 2026-02-18 at 17.40.32.png]" (human shared manual screenshot) | "idek what you changed because you dind't fix this but in the capacitor build"
     </div>
   </div>
 </div>

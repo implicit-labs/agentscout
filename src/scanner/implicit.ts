@@ -552,12 +552,8 @@ export function detectImplicitSignals(
       // Short gaps: likely the user was actively doing something outside the session
       confidence = "med";
       description = `${gap.gapMinutes}-minute gap between tool calls — user was likely doing something outside the session`;
-    } else if (gap.gapMinutes < 30) {
-      // Medium gaps: could be active work or a short break
-      confidence = "low";
-      description = `${gap.gapMinutes}-minute gap between tool calls — could be active work outside the session or a short break`;
     } else {
-      // Long gaps: more likely a break, meeting, or context switch
+      // Longer gaps: increasingly likely to be a break, meeting, or context switch
       confidence = "low";
       description = `${gap.gapMinutes}-minute gap between tool calls — likely a break, meeting, or context switch rather than continuous testing`;
     }

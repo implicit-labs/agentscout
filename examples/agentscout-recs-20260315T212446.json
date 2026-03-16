@@ -8,7 +8,7 @@
         "title": "Project-level CLAUDE.md for implicit",
         "type": "claude-md-rule",
         "tier": 1,
-        "implementation": "Create /Users/tomaitagaki/Documents/implicit/implicit/.claude/CLAUDE.md with full architecture, build commands, verification steps, Railway deployment workflow, Linear integration rules, and anti-patterns.",
+        "implementation": "Create /Users/user/Documents/implicit/implicit/.claude/CLAUDE.md with full architecture, build commands, verification steps, Railway deployment workflow, Linear integration rules, and anti-patterns.",
         "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
         "whyThisOverAlternatives": "A comprehensive project CLAUDE.md is the single highest-leverage fix — it gives the agent complete context in one read. No infrastructure needed.",
         "evidence": ["did you push? we need to push for railway to update", "Are you kidding me? You're so useless. all these tools that I gave you, and you don't even use any of them", "check if the plans are in their respective linear issues as a comment or desc. this is the way we are doing it."],
@@ -41,7 +41,7 @@
         "implementation": "Append skill trigger rules and verification rules to ~/.claude/CLAUDE.md",
         "pillarScores": { "handoffIndex": "med", "timeReclaimed": "high", "agentReadiness": "high" },
         "whyThisOverAlternatives": "CLAUDE.md rules are the lightest-weight trigger mechanism. No hooks or MCP needed.",
-        "evidence": ["Base directory for this skill: /Users/tomaitagaki/.claude/skills/x-research", "Base directory for this skill: /Users/tomaitagaki/.claude/skills/swiftui"],
+        "evidence": ["Base directory for this skill: /Users/user/.claude/skills/x-research", "Base directory for this skill: /Users/user/.claude/skills/swiftui"],
         "preflight": []
       }
     },
@@ -71,7 +71,7 @@
         "implementation": "Create ~/.claude/hooks/ios-auto-verify.sh that detects successful xcodebuild and outputs a reminder to use ios-simulator MCP.",
         "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "med" },
         "whyThisOverAlternatives": "Hooks can detect build success. They cannot call MCP tools directly, but the reminder message triggers the agent to use the MCP.",
-        "evidence": ["[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png]", "idek what you changed because you dind't fix this"],
+        "evidence": ["[Image: source: /Users/user/Downloads/Screenshot 2026-02-18 at 17.40.32.png]", "idek what you changed because you dind't fix this"],
         "preflight": [
           { "status": "pass", "check": "xcodebuild available (Xcode 26.0.1)", "detail": "required for iOS builds" },
           { "status": "pass", "check": "ios-simulator MCP in deferred tools", "detail": "provides screenshot and ui_describe_all" },

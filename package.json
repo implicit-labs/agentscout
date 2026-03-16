@@ -7,8 +7,14 @@
     "agentscout": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    ".claude/commands",
+    "examples"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/implicit-labs/agentscout.git"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

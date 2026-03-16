@@ -11,10 +11,12 @@ import { detectWorkflowSignals } from "./scanner/signals.js";
 import { loadCatalog } from "./catalog/remote.js";
 import pkg from "../package.json" with { type: "json" };
 
-// Warm up the catalog cache in the background (non-blocking)
-loadCatalog().catch(() => {});
-
 const args = process.argv.slice(2);
+
+// Warm up the catalog cache in the background (skip for --help to avoid blocking exit)
+if (!args.includes("--help") && !args.includes("-h")) {
+  loadCatalog().catch(() => {});
+}
 
 // Parse --project flag: --project=name or --project name
 function getProjectFilter(): string | undefined {
