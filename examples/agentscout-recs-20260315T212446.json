@@ -1,0 +1,216 @@
+{
+  "recommendations": [
+    {
+      "project": "implicit",
+      "finding": "Agent lacks project context — build commands, verification, Railway deployment, Linear conventions",
+      "category": "5a",
+      "recommendation": {
+        "title": "Project-level CLAUDE.md for implicit",
+        "type": "claude-md-rule",
+        "tier": 1,
+        "implementation": "Create /Users/tomaitagaki/Documents/implicit/implicit/.claude/CLAUDE.md with full architecture, build commands, verification steps, Railway deployment workflow, Linear integration rules, and anti-patterns.",
+        "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+        "whyThisOverAlternatives": "A comprehensive project CLAUDE.md is the single highest-leverage fix — it gives the agent complete context in one read. No infrastructure needed.",
+        "evidence": ["did you push? we need to push for railway to update", "Are you kidding me? You're so useless. all these tools that I gave you, and you don't even use any of them", "check if the plans are in their respective linear issues as a comment or desc. this is the way we are doing it."],
+        "preflight": []
+      }
+    },
+    {
+      "project": "implicit",
+      "finding": "Hooks block xcodebuild — human becomes the build button",
+      "category": "5a",
+      "recommendation": {
+        "title": "Fix PreToolUse hooks blocking xcodebuild",
+        "type": "config-fix",
+        "tier": 1,
+        "implementation": "Add early-exit check in auto-changelog.sh and auto-dotfiles-readme.sh for xcodebuild/xcrun/xcode-select commands.",
+        "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+        "whyThisOverAlternatives": "One-line fix in existing scripts. Instantly unblocks iOS builds.",
+        "evidence": ["Hit Cmd+R in Xcode... The hooks are blocking my xcodebuild commands", "Are you kidding me? You're so useless."],
+        "preflight": []
+      }
+    },
+    {
+      "project": "primitive",
+      "finding": "Human manually loads skills (x-research, swiftui, systematic-debugging)",
+      "category": "5b",
+      "recommendation": {
+        "title": "Global CLAUDE.md — auto-trigger rules for underused skills",
+        "type": "claude-md-rule",
+        "tier": 1,
+        "implementation": "Append skill trigger rules and verification rules to ~/.claude/CLAUDE.md",
+        "pillarScores": { "handoffIndex": "med", "timeReclaimed": "high", "agentReadiness": "high" },
+        "whyThisOverAlternatives": "CLAUDE.md rules are the lightest-weight trigger mechanism. No hooks or MCP needed.",
+        "evidence": ["Base directory for this skill: /Users/tomaitagaki/.claude/skills/x-research", "Base directory for this skill: /Users/tomaitagaki/.claude/skills/swiftui"],
+        "preflight": []
+      }
+    },
+    {
+      "project": "agentscout",
+      "finding": "Global Supabase MCP points to one project_ref but multiple projects exist",
+      "category": "5a",
+      "recommendation": {
+        "title": "Supabase MCP project-scoping fix",
+        "type": "config-fix",
+        "tier": 1,
+        "implementation": "Use project-level .claude/settings.local.json overrides for each project that needs a different Supabase project_ref.",
+        "pillarScores": { "handoffIndex": "med", "timeReclaimed": "med", "agentReadiness": "high" },
+        "whyThisOverAlternatives": "Built-in project-level override mechanism. No new tools.",
+        "evidence": ["#1 is messing up my supabase config across multiple project configs so i should fix this"],
+        "preflight": []
+      }
+    },
+    {
+      "project": "primitive",
+      "finding": "Human screenshots simulator manually; agent has MCP but doesn't use it",
+      "category": "5d",
+      "recommendation": {
+        "title": "PostToolUse hook: auto-verify iOS builds",
+        "type": "hook",
+        "tier": 2,
+        "implementation": "Create ~/.claude/hooks/ios-auto-verify.sh that detects successful xcodebuild and outputs a reminder to use ios-simulator MCP.",
+        "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "med" },
+        "whyThisOverAlternatives": "Hooks can detect build success. They cannot call MCP tools directly, but the reminder message triggers the agent to use the MCP.",
+        "evidence": ["[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png]", "idek what you changed because you dind't fix this"],
+        "preflight": [
+          { "status": "pass", "check": "xcodebuild available (Xcode 26.0.1)", "detail": "required for iOS builds" },
+          { "status": "pass", "check": "ios-simulator MCP in deferred tools", "detail": "provides screenshot and ui_describe_all" },
+          { "status": "info", "check": "Hook outputs reminder text, agent must follow through", "detail": "hooks cannot call MCP directly" }
+        ]
+      }
+    },
+    {
+      "project": "implicit",
+      "finding": "Full Xcode build-test-fix loop from agent",
+      "category": "5d",
+      "recommendation": {
+        "title": "XcodeBuild MCP (Sentry)",
+        "type": "third-party-tool",
+        "tier": 3,
+        "implementation": "npx @getsentry/xcodebuild-mcp — add to .claude/mcp.json",
+        "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+        "whyThisOverAlternatives": "The Tier 1 CLAUDE.md rule + Tier 2 hook get 80% of value. This MCP wraps the full Xcode toolchain for the remaining 20% — structured error parsing, test management.",
+        "evidence": ["Are you kidding me? You're so useless.", "tcp_output [C1.1.2:3] flags=[R.] seq=2312391547..."],
+        "preflight": [
+          { "status": "pass", "check": "Node.js v25.2.1", "detail": "required runtime" },
+          { "status": "pass", "check": "Xcode 26.0.1", "detail": "required" },
+          { "status": "pass", "check": "npm package exists (v18.0.10)", "detail": "@getsentry/xcodebuild-mcp" }
+        ]
+      }
+    },
+    {
+      "project": "primitive",
+      "finding": "No tool streams iOS app runtime logs into the session",
+      "category": "6",
+      "recommendation": {
+        "title": "iOS Simulator log streaming",
+        "type": "new-mcp",
+        "tier": 3,
+        "implementation": "Add log_stream tool to ios-simulator MCP wrapping xcrun simctl spawn booted log stream",
+        "pillarScores": { "handoffIndex": "med", "timeReclaimed": "high", "agentReadiness": "med" },
+        "whyThisOverAlternatives": "The CLAUDE.md rule in Tier 1 already tells the agent to run log stream via Bash — that's the 80% solution. This formalizes it as a structured MCP tool.",
+        "evidence": ["tcp_output [C1.1.2:3] flags=[R.] seq=2312391547...", "i am seeing some of these errors and the core functionality doesn't work"],
+        "preflight": [
+          { "status": "pass", "check": "xcrun available", "detail": "simctl log stream requires Xcode CLI tools" },
+          { "status": "info", "check": "Requires MCP server development", "detail": "extend existing ios-simulator-mcp" }
+        ]
+      }
+    },
+    {
+      "project": "pack",
+      "finding": "Human carries context between two Claude Code agents",
+      "category": "7",
+      "recommendation": {
+        "title": "Inter-agent context sharing protocol",
+        "type": "skill",
+        "tier": 3,
+        "implementation": "Create a handoff skill that produces self-contained .md files with file paths, config keys, expected visual output, and verification steps — so the receiving agent can consume without human relay.",
+        "pillarScores": { "handoffIndex": "high", "timeReclaimed": "med", "agentReadiness": "low" },
+        "whyThisOverAlternatives": "No existing tool solves cross-agent context. MCP Agent Mail exists but is immature. A handoff doc convention is the simplest starting point.",
+        "evidence": ["tell me the exact place to find the code for the kith version. my agent is not replicating it correctly", "how do i explain to the other agent"],
+        "preflight": []
+      }
+    }
+  ],
+  "quickWins": [
+    "Create implicit project CLAUDE.md (Tier 1 #1)",
+    "Fix hooks blocking xcodebuild (Tier 1 #2)",
+    "Add skill auto-trigger rules to global CLAUDE.md (Tier 1 #3)",
+    "Fix Supabase MCP project scoping (Tier 1 #4)"
+  ],
+  "buildList": [
+    "iOS auto-verify PostToolUse hook (Tier 2 #1)",
+    "XcodeBuild MCP from Sentry (Tier 3 #1)",
+    "iOS Simulator log streaming MCP tool (Tier 3 #2)",
+    "Inter-agent context sharing protocol (Tier 3 #3)"
+  ],
+  "explore": [
+    {
+      "tool": "XcodeBuild MCP",
+      "catalogEntry": "MCP",
+      "description": "Build, test, manage Xcode projects from the agent. Structured error parsing, test management, build configuration.",
+      "relevance": "For implicit (244 sessions) and primitive (23 sessions) where the human acts as the iOS build error relay. Already recommended in Tier 3 — explore for deeper integration.",
+      "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+      "setupSteps": "npx @getsentry/xcodebuild-mcp — add to .claude/mcp.json",
+      "alreadyInstalled": false,
+      "attribution": "@getsentry",
+      "preflight": [
+        { "status": "pass", "check": "Node.js v25.2.1", "detail": "" },
+        { "status": "pass", "check": "Xcode 26.0.1", "detail": "" },
+        { "status": "pass", "check": "npm package v18.0.10", "detail": "" }
+      ]
+    },
+    {
+      "tool": "Context7",
+      "catalogEntry": "MCP",
+      "description": "Live version-specific library docs. Prevents hallucinated API patterns by giving the agent up-to-date documentation.",
+      "relevance": "For primitive (23 sessions) where the agent made incorrect API assumptions and the human had to correct. Also useful for implicit with its diverse dependency set.",
+      "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+      "setupSteps": "npx context7-mcp — add to .claude/mcp.json",
+      "alreadyInstalled": false,
+      "attribution": "@upstash",
+      "preflight": [
+        { "status": "pass", "check": "Node.js v25.2.1", "detail": "" },
+        { "status": "info", "check": "Free tier available", "detail": "" }
+      ]
+    },
+    {
+      "tool": "Maestro",
+      "catalogEntry": "CLI",
+      "description": "Declarative automated mobile app testing. Write YAML test flows (tap, swipe, assert text) that run against iOS simulator.",
+      "relevance": "For primitive (23 sessions) where 445 gap minutes were spent manually testing swipe gestures, keyboard interactions, and TTS playback. Maestro can automate these UI flows.",
+      "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "med" },
+      "setupSteps": "curl -Ls 'https://get.maestro.mobile.dev' | bash",
+      "alreadyInstalled": false,
+      "attribution": "@mobile-dev-inc",
+      "preflight": [
+        { "status": "fail", "check": "maestro not in PATH", "detail": "needs install" },
+        { "status": "warn", "check": "Requires Java runtime", "detail": "JDK 11+" }
+      ]
+    },
+    {
+      "tool": "Git commits as prompts",
+      "catalogEntry": "Technique",
+      "description": "Write commit messages that describe WHY and HOW, not just WHAT — so another agent reading git log can recreate the work.",
+      "relevance": "For pack (5 sessions) where the human carried context between agents across 3+ round trips. If commits are self-documenting, the receiving agent can reconstruct via git log alone.",
+      "pillarScores": { "handoffIndex": "high", "timeReclaimed": "high", "agentReadiness": "high" },
+      "setupSteps": "Add to CLAUDE.md: 'Write commit messages with enough context that another agent reading git log could recreate the work.'",
+      "alreadyInstalled": false,
+      "attribution": "@joelhooks",
+      "preflight": []
+    },
+    {
+      "tool": "ccusage",
+      "catalogEntry": "CLI",
+      "description": "Token usage + cost dashboard from local Claude Code session logs. Shows per-session and per-project cost breakdowns.",
+      "relevance": "For agentscout (106 sessions) where /diagnose spawns multiple subagents that consume significant tokens. The AgentScout README already warns about token usage.",
+      "pillarScores": { "handoffIndex": "low", "timeReclaimed": "med", "agentReadiness": "high" },
+      "setupSteps": "npx ccusage",
+      "alreadyInstalled": false,
+      "attribution": "@ryoppippi",
+      "preflight": [
+        { "status": "pass", "check": "Node.js v25.2.1", "detail": "" }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,9 @@ agentscout-recs-*.json
 agentscout-recs-*.html
 agentscout-analysis-*.json
 
+# Keep example outputs tracked
+!examples/**
+
 # Internal dev artifacts
 PRD.md
 task-list.md
