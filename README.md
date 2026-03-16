@@ -8,14 +8,7 @@ Analyzes your Claude Code sessions to find where you're doing work the agent cou
 npm install -g @implicit-ai/agentscout
 ```
 
-Then copy the skill files into any project you want to diagnose:
-
-```bash
-mkdir -p .claude/commands
-cp $(npm root -g)/@implicit-ai/agentscout/.claude/commands/*.md .claude/commands/
-```
-
-That's it. Open Claude Code in that project and run `/diagnose`.
+That's it. The `/diagnose` and `/recommend` commands are automatically installed to `~/.claude/commands/` and available in every project.
 
 ## Token Usage Warning
 
