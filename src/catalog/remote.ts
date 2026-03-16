@@ -8,7 +8,7 @@
  * Cache: ~/.agentscout/catalog-cache.json (24-hour TTL)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import bundledCatalog from "./tools.json" with { type: "json" };
@@ -24,9 +24,11 @@ interface CacheEntry {
   catalog: unknown[];
 }
 
+// In-memory cache to avoid re-reading from disk on every call
+let memCached: { entry: CacheEntry; result: typeof bundledCatalog } | null = null;
+
 function readCache(): CacheEntry | null {
   try {
-    if (!existsSync(CACHE_FILE)) return null;
     const raw = readFileSync(CACHE_FILE, "utf-8");
     const entry = JSON.parse(raw) as CacheEntry;
     if (!entry.fetchedAt || !Array.isArray(entry.catalog)) return null;
@@ -38,11 +40,10 @@ function readCache(): CacheEntry | null {
 
 function writeCache(catalog: unknown[]): void {
   try {
-    if (!existsSync(CACHE_DIR)) {
-      mkdirSync(CACHE_DIR, { recursive: true });
-    }
+    mkdirSync(CACHE_DIR, { recursive: true });
     const entry: CacheEntry = { fetchedAt: Date.now(), catalog };
     writeFileSync(CACHE_FILE, JSON.stringify(entry), "utf-8");
+    memCached = { entry, result: catalog as typeof bundledCatalog };
   } catch {
     // Cache write failure is non-fatal
   }
@@ -67,25 +68,28 @@ async function fetchRemoteCatalog(): Promise<unknown[] | null> {
  * Load the tool catalog with remote-fetch + cache + bundled fallback.
  *
  * Priority:
- * 1. Cached catalog (if < 24h old)
- * 2. Fresh fetch from GitHub (cached on success)
- * 3. Bundled catalog (always available)
+ * 1. In-memory cache
+ * 2. Disk cache (if < 24h old)
+ * 3. Fresh fetch from GitHub (cached on success)
+ * 4. Bundled catalog (always available)
  */
 export async function loadCatalog(): Promise<typeof bundledCatalog> {
-  // Check cache first
-  const cached = readCache();
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.catalog as typeof bundledCatalog;
+  if (memCached && Date.now() - memCached.entry.fetchedAt < CACHE_TTL_MS) {
+    return memCached.result;
   }
 
-  // Try remote fetch
+  const cached = readCache();
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    memCached = { entry: cached, result: cached.catalog as typeof bundledCatalog };
+    return memCached.result;
+  }
+
   const remote = await fetchRemoteCatalog();
   if (remote) {
     writeCache(remote);
     return remote as typeof bundledCatalog;
   }
 
-  // Fall back to bundled
   return bundledCatalog;
 }
 
@@ -93,10 +97,15 @@ export async function loadCatalog(): Promise<typeof bundledCatalog> {
  * Synchronous access to the bundled catalog (for contexts where async isn't possible).
  */
 export function loadCatalogSync(): typeof bundledCatalog {
-  // Try cache first
+  if (memCached && Date.now() - memCached.entry.fetchedAt < CACHE_TTL_MS) {
+    return memCached.result;
+  }
+
   const cached = readCache();
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.catalog as typeof bundledCatalog;
+    memCached = { entry: cached, result: cached.catalog as typeof bundledCatalog };
+    return memCached.result;
   }
+
   return bundledCatalog;
 }

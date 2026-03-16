@@ -30,7 +30,7 @@
             "integration": "Agent should run `tail -n 50 ~/.implicit/daemon.log` after daemon changes. Use `railway logs` for deployment logs. Use Playwright console_messages for browser logs. Add a post-deployment verification skill.",
             "observableSuccess": "Human stops pasting log output into the session",
             "whyNotJustJudgment": "Copy-pasting logs is pure data relay — zero human judgment involved",
-            "evidence": ["i see this:\n\n[hook-bridge] Decision e4b44902... stale (no poll for 7s)", "here is what i am seeing:\n\n(base) implicit git:(feat/imp-210-phase2-hook-relay) tail -f ~/.implicit/daemon.log", "phase 1 testing:\n\n(base) implicit git:(feat/imp-210-daemon) ps aux | grep daemon.js"]
+            "evidence": ["i see this:\n\n[hook-bridge] Decision <decision-id>... stale (no poll for 7s)", "here is what i am seeing:\n\n(base) implicit git:(feat/IMP-XXX-phase2-hook-relay) tail -f ~/.implicit/daemon.log", "phase 1 testing:\n\n(base) implicit git:(feat/IMP-XXX-daemon) ps aux | grep daemon.js"]
           },
           {
             "title": "Human checks Railway deployment status and relays it",
@@ -119,13 +119,13 @@
             "category": "5d",
             "interactionSurface": "iOS Simulator <-> Agent (brokered by human camera relay)",
             "humanRole": "Takes screenshots of running app and shares them as image files",
-            "description": "The ios-simulator MCP has screenshot capability. The ios-verify skill exists. But the agent never used either — the human manually screenshotted and shared /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png.",
+            "description": "The ios-simulator MCP has screenshot capability. The ios-verify skill exists. But the agent never used either — the human manually screenshotted and shared /Users/user/Downloads/Screenshot 2026-02-18 at 17.40.32.png.",
             "severity": "high",
             "existingToolCheck": "ios-simulator MCP: screenshot, ui_describe_all, ui_tap, ui_swipe all available. ios-verify skill available. CLAUDE.md lists ios-verify for .xcodeproj projects. None used.",
             "integration": "CLAUDE.md rule: 'After building and launching an iOS app, use ios-simulator MCP to screenshot and ui_describe_all to verify the UI before presenting results.'",
             "observableSuccess": "Agent takes its own simulator screenshots instead of human sharing Downloads/*.png",
             "whyNotJustJudgment": "Screenshotting a simulator is a mechanical action the MCP already supports",
-            "evidence": ["[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-02-18 at 17.40.32.png]"]
+            "evidence": ["[Image: source: /Users/user/Downloads/Screenshot 2026-02-18 at 17.40.32.png]"]
           },
           {
             "title": "Human pastes Xcode console logs (TCP errors, XPC interruptions)",
@@ -151,7 +151,7 @@
             "integration": "Add to CLAUDE.md auto-use list: 'x-research: when user shares X/Twitter URLs. swiftui: when editing .swift files with SwiftUI imports. systematic-debugging: when encountering runtime errors.'",
             "observableSuccess": "Agent invokes these skills automatically without human pasting them",
             "whyNotJustJudgment": "Skill loading is a lookup operation, not a judgment call",
-            "evidence": ["Base directory for this skill: /Users/tomaitagaki/.claude/skills/x-research", "Base directory for this skill: /Users/tomaitagaki/.claude/skills/swiftui"]
+            "evidence": ["Base directory for this skill: /Users/user/.claude/skills/x-research", "Base directory for this skill: /Users/user/.claude/skills/swiftui"]
           },
           {
             "title": "Human reports UI bugs found by manual simulator testing",
@@ -217,9 +217,9 @@
             "category": "2",
             "interactionSurface": "Local filesystem (skill paths) <-> Agent",
             "humanRole": "Had to help agent find the correct skill path after multiple failures",
-            "description": "Agent tried ~/clawd/skills/x-research (wrong) instead of the registered path in inventory. Multiple retries with find commands before finding the correct path at /Users/tomaitagaki/dotfiles/claude/.claude/skills/x-research/.",
+            "description": "Agent tried ~/clawd/skills/x-research (wrong) instead of the registered path in inventory. Multiple retries with find commands before finding the correct path at /Users/user/dotfiles/claude/.claude/skills/x-research/.",
             "severity": "high",
-            "existingToolCheck": "x-research skill path is in the inventory at /Users/tomaitagaki/.claude/skills/x-research. Agent should resolve paths from skills[] array.",
+            "existingToolCheck": "x-research skill path is in the inventory at /Users/user/.claude/skills/x-research. Agent should resolve paths from skills[] array.",
             "integration": "Skills should be invoked through the Skill tool (which resolves paths automatically) rather than manually constructing bash commands with guessed paths.",
             "observableSuccess": "Agent never guesses skill paths — always uses the Skill tool or reads from inventory",
             "whyNotJustJudgment": "Path resolution is deterministic lookup, not judgment",
@@ -232,7 +232,7 @@
             "humanRole": "Human inspected Supabase state externally and reported config issues",
             "description": "Human observed '#1 is messing up my supabase config across multiple project configs so i should fix this' — the global Supabase MCP points to one project_ref but multiple projects exist.",
             "severity": "med",
-            "existingToolCheck": "Supabase MCP configured globally with project_ref=hhlvdrxespkkjkzfjmal. supabase CLI available. Neither used to validate cross-project configs.",
+            "existingToolCheck": "Supabase MCP configured globally with project_ref=<project_ref>. supabase CLI available. Neither used to validate cross-project configs.",
             "integration": "Agent should use supabase CLI to list projects and verify the MCP config matches the current project context.",
             "observableSuccess": "Agent detects and warns about Supabase config mismatches",
             "whyNotJustJudgment": "Config validation is a checkable fact",
@@ -267,12 +267,12 @@
       "project": "landing",
       "json": {
         "project": "landing",
-        "engineerPerspective": "Building a landing page. Sessions devolved into a prolonged font-matching ordeal where the human acted as the visual comparator between localhost and implicit.cc, repeatedly correcting the agent's font identification. 75% of interventions were the human being the diff engine between two browser tabs.",
+        "engineerPerspective": "Building a landing page. Sessions devolved into a prolonged font-matching ordeal where the human acted as the visual comparator between localhost and example.cc, repeatedly correcting the agent's font identification. 75% of interventions were the human being the diff engine between two browser tabs.",
         "fixableInteractions": [
           {
             "title": "Agent cannot visually compare two live sites",
             "category": "5d",
-            "interactionSurface": "Browser (localhost:3001) + Browser (implicit.cc) <-> Agent",
+            "interactionSurface": "Browser (localhost:3001) + Browser (example.cc) <-> Agent",
             "humanRole": "Switches between two browser tabs comparing fonts, identifies mismatches, tells agent which element has which font",
             "description": "12 of 16 interventions were the human acting as a visual comparison bridge. The agent has Playwright but never used it to screenshot both URLs and compare computed styles. User eventually told the agent to use Playwright explicitly.",
             "severity": "critical",
@@ -280,7 +280,7 @@
             "integration": "CLAUDE.md rule: 'When matching visual styles from a reference URL, use Playwright to: (1) screenshot both URLs, (2) extract computed styles from target elements via browser_evaluate, (3) compare and apply. Never guess fonts — always verify programmatically.'",
             "observableSuccess": "Agent screenshots both sites and extracts computed styles without human tab-switching",
             "whyNotJustJudgment": "Font IDENTIFICATION is a verifiable fact. Font CHOICE is judgment. The agent was failing at identification.",
-            "evidence": ["nope dude. use playwright.\n\n1. checkout http://localhost:3001 and confirm that you are messing up\n2. checkout implicit.cc", "dude im telling you its NOT\n\nclass=\"text-implicit-cream\"", "it's quite incredible how incompetent you are."]
+            "evidence": ["nope dude. use playwright.\n\n1. checkout http://localhost:3001 and confirm that you are messing up\n2. checkout example.cc", "dude im telling you its NOT\n\nclass=\"text-implicit-cream\"", "it's quite incredible how incompetent you are."]
           },
           {
             "title": "Agent failed to read reference codebase for CSS classes",
@@ -289,7 +289,7 @@
             "humanRole": "Manually inspected the implicit-landing source files and told agent the correct CSS class name",
             "description": "The implicit-landing project exists locally. The agent could Read files from it. Instead, the human had to manually identify class='text-implicit-cream' and tell the agent to copy it.",
             "severity": "critical",
-            "existingToolCheck": "codebase-explore skill available. Read tool available. Agent could access /Users/tomaitagaki/Documents/implicit/implicit-landing/ directly.",
+            "existingToolCheck": "codebase-explore skill available. Read tool available. Agent could access /Users/user/Documents/implicit/implicit-landing/ directly.",
             "integration": "When told to match styles from another project, agent should Read the reference project's CSS/tailwind config directly.",
             "observableSuccess": "Agent reads reference codebase CSS without human looking up class names",
             "whyNotJustJudgment": "Reading a CSS class name from a file is lookup, not taste",
@@ -300,7 +300,7 @@
           {
             "title": "Activity gaps correlate with browser comparison sessions",
             "relayPattern": "Agent makes CSS change → human checks both browser tabs (gap) → returns with correction",
-            "systemBrokered": "Two browser tabs (localhost + implicit.cc)",
+            "systemBrokered": "Two browser tabs (localhost + example.cc)",
             "category": "6",
             "severity": "med",
             "confidence": "med",
@@ -308,7 +308,7 @@
             "evidence": ["8min gap, 10min gap during the font saga"]
           }
         ],
-        "systemsHumanBrokered": ["Browser (localhost:3001)", "Browser (implicit.cc)", "Terminal (separate shell for npm run dev)", "implicit-landing codebase", "GitHub"],
+        "systemsHumanBrokered": ["Browser (localhost:3001)", "Browser (example.cc)", "Terminal (separate shell for npm run dev)", "implicit-landing codebase", "GitHub"],
         "rawUserVoice": [
           {"quote": "no this was NOT the original font", "type": "correction"},
           {"quote": "nope dude. use playwright.", "type": "frustration"},
@@ -447,7 +447,7 @@
             "integration": "CLAUDE.md rule: 'When fixing Capacitor/iOS bugs, verify on ios-simulator MCP, not web Playwright. The native viewport behaves differently.'",
             "observableSuccess": "Agent verifies iOS fixes using ios-simulator MCP instead of web Playwright",
             "whyNotJustJudgment": "Wrong verification platform is a factual error",
-            "evidence": ["idek what you changed because you dind't fix this but in the capacitor build (ios where the headers are more like a phone shape", "[Image: source: /Users/tomaitagaki/Downloads/Screenshot 2026-03-08 at 19.51.39.png]"]
+            "evidence": ["idek what you changed because you dind't fix this but in the capacitor build (ios where the headers are more like a phone shape", "[Image: source: /Users/user/Downloads/Screenshot 2026-03-08 at 19.51.39.png]"]
           }
         ],
         "implicitFindings": [],
@@ -524,7 +524,7 @@
             "integration": "Agent should run Capacitor build commands within its own session instead of having user relay from another terminal.",
             "observableSuccess": "Agent runs cap build and captures errors directly",
             "whyNotJustJudgment": "Error relay is data transfer",
-            "evidence": ["Unable to open base configuration reference file", "in client-ios\n\n(base) ➜  client-ios git:(feat/imp-182-capacitor-ios) pnpm open"]
+            "evidence": ["Unable to open base configuration reference file", "in client-ios\n\n(base) ➜  client-ios git:(feat/IMP-YYY-capacitor-ios) pnpm open"]
           }
         ],
         "implicitFindings": [],
