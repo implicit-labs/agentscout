@@ -169,7 +169,7 @@ The `implicitSignals` field contains pre-detected patterns suggesting the human 
    - The human switches between browser tabs to compare states → the comparison is implicit
    - The human refreshes a page to see if a deploy landed → the refreshing is invisible
 
-   For `activity-gap` signals, ask: **What was the human probably doing during this gap?** Use surrounding messages as context.
+   For `activity-gap` signals, ask: **What was the human probably doing during this gap?** Use surrounding messages as context. **Important:** Longer gaps (30-60 min) are more likely breaks, meetings, or context switches — do NOT assume the user was continuously testing or working outside the session for that entire duration. Only short gaps (5-15 min) reliably indicate active work outside the session (e.g., checking a dashboard, reading logs). Weight your interpretation accordingly.
 
 4. **Identify systems the agent should have been reading.** For each `systemsConsulted` entry:
    - Does the inventory have a tool that can read from this system?

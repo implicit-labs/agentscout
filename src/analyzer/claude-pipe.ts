@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { ScanResult } from "../scanner/sessions.js";
 import type { InstalledTool } from "../scanner/installed.js";
 import type { WorkflowSignal } from "../scanner/signals.js";
-import toolsCatalog from "../catalog/tools.json" with { type: "json" };
+import { loadCatalogSync } from "../catalog/remote.js";
 
 export type ScoreLevel = "low" | "med" | "high";
 
@@ -180,7 +180,7 @@ function buildPrompt(
     )
     .join("\n");
 
-  const catalogList = toolsCatalog
+  const catalogList = loadCatalogSync()
     .map(
       (t) =>
         `- ${t.name} [${t.id}] (${t.type}): ${t.sellTemplate} | Install: ${t.installCommand} | URL: ${t.url} | Stars: ${t.meta.stars} | Permissions: ${t.meta.permissions} | Risk: ${t.meta.riskLevel}`

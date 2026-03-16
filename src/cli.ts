@@ -8,7 +8,11 @@ import {
 import { discoverInstalledTools } from "./scanner/installed.js";
 import { buildToolingInventory } from "./scanner/inventory.js";
 import { detectWorkflowSignals } from "./scanner/signals.js";
+import { loadCatalog } from "./catalog/remote.js";
 import pkg from "../package.json" with { type: "json" };
+
+// Warm up the catalog cache in the background (non-blocking)
+loadCatalog().catch(() => {});
 
 const args = process.argv.slice(2);
 
