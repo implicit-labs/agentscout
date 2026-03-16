@@ -18,7 +18,22 @@ Read that file. If none exists, tell the user to run `/diagnose` first.
 AGENTSCOUT_LLM_PROJECT_LIMIT=10 node dist/cli.js --inventory 2>/dev/null
 ```
 
-**1c. Read the catalogs:**
+**1c. Update claude-native.md with the latest Claude Code features:**
+
+Before reading the catalogs, fetch the latest Claude Code documentation to ensure `catalog/claude-native.md` reflects current capabilities:
+
+```
+Use WebFetch to read https://docs.anthropic.com/en/docs/claude-code/overview
+```
+
+Compare the fetched content against `catalog/claude-native.md`. If there are new features, hooks, tools, or capabilities not yet documented in the file, update it. Common things to check:
+- New hook events (beyond PreToolUse, PostToolUse, etc.)
+- New built-in tools
+- New plugin types
+- New MCP configuration options
+- New memory or skill capabilities
+
+Then read the catalogs:
 - `catalog/claude-native.md` — built-in Claude Code features (hooks, memory, skills, CLAUDE.md rules, plugins)
 - `catalog/potential-solutions.md` — curated third-party tools, MCPs, CLIs, skills, techniques
 - `catalog/tools.json` — structured tool catalog with pillar scores
