@@ -627,5 +627,22 @@
       "permissions": "Browser extension",
       "riskLevel": "medium"
     }
+  },
+  {
+    "id": "openlogs",
+    "name": "OpenLogs",
+    "type": "cli",
+    "installCommand": "npm i -g openlogs",
+    "url": "https://github.com/charlietlamb/openlogs",
+    "patterns": ["deployment", "debugging"],
+    "workflowOwnership": "high",
+    "painEliminated": "high",
+    "agentReadiness": "high",
+    "sellTemplate": "Stop copy-pasting logs into the chat. OpenLogs captures runtime logs from your app and makes them directly queryable by the agent — no more human relay for error messages, stack traces, or deployment output.",
+    "meta": {
+      "stars": 80,
+      "permissions": "Local filesystem (writes to .openlogs/)",
+      "riskLevel": "low"
+    }
   }
 ]
