@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, mkdirSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, existsSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -12,7 +12,7 @@ const dest = join(homedir(), ".claude", "commands");
 try {
   mkdirSync(dest, { recursive: true });
 
-  for (const file of ["diagnose.md", "recommend.md"]) {
+  for (const file of ["agentscout.md"]) {
     const src = join(source, file);
     const dst = join(dest, file);
     if (existsSync(src)) {
@@ -20,7 +20,15 @@ try {
     }
   }
 
-  console.log("[agentscout] Installed /diagnose and /recommend commands to ~/.claude/commands/");
+  // Clean up old commands from previous versions
+  for (const old of ["diagnose.md", "recommend.md"]) {
+    const oldDst = join(dest, old);
+    if (existsSync(oldDst)) {
+      try { unlinkSync(oldDst); } catch {}
+    }
+  }
+
+  console.log("[agentscout] Installed /agentscout command to ~/.claude/commands/");
 } catch {
   // Non-fatal — user can copy manually
 }
