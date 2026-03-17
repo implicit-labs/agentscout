@@ -1,19 +1,27 @@
 {
-  "name": "agentscout",
-  "version": "0.1.0",
+  "name": "@implicit-ai/agentscout",
+  "version": "0.1.1",
   "description": "Your agents should shop for their own tools. Analyzes Claude Code sessions to find workflow inefficiencies and recommend tools.",
   "type": "module",
   "bin": {
     "agentscout": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts",
+    ".claude/commands",
+    "examples"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/implicit-labs/agentscout.git"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "node dist/cli.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "postinstall": "node scripts/postinstall.js"
   },
   "engines": {
     "node": ">=18"

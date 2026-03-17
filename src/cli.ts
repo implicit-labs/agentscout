@@ -1,4 +1,4 @@
-import { scanSessions } from "./scanner/sessions.js";
+import { scanSessions, computeWrappedStats } from "./scanner/sessions.js";
 import { detectPatterns } from "./scanner/patterns.js";
 import {
   computeDiagnosis,
@@ -8,9 +8,15 @@ import {
 import { discoverInstalledTools } from "./scanner/installed.js";
 import { buildToolingInventory } from "./scanner/inventory.js";
 import { detectWorkflowSignals } from "./scanner/signals.js";
+import { loadCatalog } from "./catalog/remote.js";
 import pkg from "../package.json" with { type: "json" };
 
 const args = process.argv.slice(2);
+
+// Warm up the catalog cache in the background (skip for --help to avoid blocking exit)
+if (!args.includes("--help") && !args.includes("-h")) {
+  loadCatalog().catch(() => {});
+}
 
 // Parse --project flag: --project=name or --project name
 function getProjectFilter(): string | undefined {
@@ -28,9 +34,9 @@ if (args.includes("--help") || args.includes("-h")) {
   console.log(`AgentScout v${pkg.version}
 Your agents should shop for their own tools.
 
-Usage as Claude Code skills (recommended):
-  /diagnose     Run full workflow diagnosis
-  /recommend    Generate tool recommendations from diagnosis
+Usage as Claude Code skill (recommended):
+  /agentscout              Full pipeline: diagnose + recommend in one pass
+  /agentscout <project>    Scope to a single project
 
 Usage as CLI:
   agentscout --inventory              Output tooling inventory as JSON
@@ -67,7 +73,8 @@ Usage as CLI:
     const detectedSignals = detectWorkflowSignals(sessionSignalData);
     const computedDiag = computeDiagnosis(scan, detectedSignals, installed);
     const { briefs, prompts } = buildDiagnosisData(scan, detectedSignals, computedDiag, installed);
-    process.stdout.write(JSON.stringify({ briefs, prompts, projectCount: computedDiag.projects.length }, null, 2));
+    const wrappedStats = computeWrappedStats(scan);
+    process.stdout.write(JSON.stringify({ briefs, prompts, projectCount: computedDiag.projects.length, wrappedStats }, null, 2));
   })().catch((err) => {
     console.error(err);
     process.exit(1);
@@ -100,6 +107,6 @@ Usage as CLI:
 } else {
   console.log(`AgentScout v${pkg.version}
 
-Run /diagnose and /recommend as Claude Code skills for the full experience.
+Run /agentscout as a Claude Code skill for the full experience.
 Run agentscout --help for CLI options.`);
 }

@@ -545,13 +545,26 @@ export function detectImplicitSignals(
   // ── Activity Gaps ──
   const gaps = detectActivityGaps(toolTimestamps);
   for (const gap of gaps) {
+    let confidence: ImplicitSignal["confidence"];
+    let description: string;
+
+    if (gap.gapMinutes < 15) {
+      // Short gaps: likely the user was actively doing something outside the session
+      confidence = "med";
+      description = `${gap.gapMinutes}-minute gap between tool calls — user was likely doing something outside the session`;
+    } else {
+      // Longer gaps: increasingly likely to be a break, meeting, or context switch
+      confidence = "low";
+      description = `${gap.gapMinutes}-minute gap between tool calls — likely a break, meeting, or context switch rather than continuous testing`;
+    }
+
     signals.push({
       type: "activity-gap",
       source: "Unknown (user was away from session)",
       evidence: `${gap.gapMinutes}min gap: ${gap.gapStart} → ${gap.gapEnd}`,
       messageSnippet: "",
-      confidence: gap.gapMinutes >= 15 ? "high" : "med",
-      description: `${gap.gapMinutes}-minute gap between tool calls — user was likely doing something outside the session`,
+      confidence,
+      description,
     });
   }
 

@@ -3,7 +3,7 @@ import type { InstalledTool } from "../scanner/installed.js";
 import type { WorkflowSignal } from "../scanner/signals.js";
 import type { ScanResult } from "../scanner/sessions.js";
 import { isToolInstalled } from "../scanner/installed.js";
-import toolsCatalog from "../catalog/tools.json" with { type: "json" };
+import { loadCatalogSync } from "../catalog/remote.js";
 
 export type ScoreLevel = "low" | "med" | "high";
 
@@ -405,7 +405,7 @@ export function matchToolsToPatterns(
   signals: WorkflowSignal[] = [],
   scanResult?: ScanResult,
 ): ToolRecommendation[] {
-  const catalog = toolsCatalog as CatalogEntry[];
+  const catalog = loadCatalogSync() as CatalogEntry[];
   const recommendations: ToolRecommendation[] = [];
 
   const patternsByCategory = new Map<PatternCategory, DetectedPattern>();
