@@ -350,6 +350,107 @@
     margin-top: 0.5rem;
     opacity: 0.4;
   }
+
+  /* ══════ Wrapped Card ══════ */
+  .wrapped {
+    background: linear-gradient(135deg, #0f1923 0%, #111111 50%, #130f1a 100%);
+    border: 1px solid #1a2a3a;
+    border-radius: 10px;
+    padding: 2rem 2rem 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wrapped::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+    opacity: 0.6;
+  }
+
+  .wrapped-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+  }
+
+  .wrapped-stats {
+    display: flex;
+    gap: 2.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .wrapped-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wrapped-stat .num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--cyan);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .wrapped-stat .label {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-top: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .wrapped-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.82rem;
+  }
+
+  .wrapped-meta span {
+    color: var(--text-dim);
+  }
+
+  .wrapped-meta .val {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .wrapped-meta .project-val {
+    color: var(--magenta);
+    font-weight: 600;
+  }
+
+  .wrapped-divider {
+    border: none;
+    border-top: 1px dashed #222;
+    margin: 0 0 1rem;
+  }
+
+  .wrapped-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+  }
+
+  .wrapped-insights span {
+    color: var(--green);
+  }
+
+  .wrapped-insights .insight-dim {
+    color: var(--text-dim);
+  }
 </style>
 </head>
 <body>
@@ -363,6 +464,36 @@
     <span>Generated <span class="val">{{date}}</span></span>
     <span><span class="val">{{projectCount}}</span> projects</span>
     <span><span class="val">{{sessionCount}}</span> sessions</span>
+  </div>
+</div>
+
+<!-- WRAPPED CARD -->
+<div class="wrapped">
+  <div class="wrapped-title">your claude code wrapped</div>
+  <div class="wrapped-stats">
+    <div class="wrapped-stat">
+      <span class="num">{{totalProjects}}</span>
+      <span class="label">projects</span>
+    </div>
+    <div class="wrapped-stat">
+      <span class="num">{{totalSessions}}</span>
+      <span class="label">sessions</span>
+    </div>
+    <div class="wrapped-stat">
+      <span class="num">{{totalTokensFormatted}}</span>
+      <span class="label">tokens</span>
+    </div>
+  </div>
+  <div class="wrapped-meta">
+    <span>Claude Code user since <span class="val">{{firstSessionDate}}</span></span>
+    <span>Most active: <span class="project-val">{{mostActiveProject}}</span> ({{mostActiveProjectSessions}} sessions)</span>
+  </div>
+  <hr class="wrapped-divider">
+  <div class="wrapped-insights">
+    <!-- Include only the insights that are meaningful -->
+    <span>your busiest project had <span class="val">{{busiestVsAverage}}</span></span>
+    <span>you used <span class="val">{{uniqueToolsUsed}}</span> different tools</span>
+    <span>your agent ran <span class="val">{{totalBashCommands}}</span> bash commands</span>
   </div>
 </div>
 
