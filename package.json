@@ -1,6 +1,6 @@
 {
   "name": "@implicit-ai/agentscout",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Your agents should shop for their own tools. Analyzes Claude Code sessions to find workflow inefficiencies and recommend tools.",
   "type": "module",
   "bin": {
