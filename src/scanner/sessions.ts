@@ -312,51 +312,81 @@ async function discoverJSONLFiles(
   }
 }
 
-export async function scanSessions(
-  maxSessionsPerProject: number = 10,
-  projectFilter?: string
-): Promise<ScanResult> {
-  const startTime = Date.now();
+/**
+ * Cluster worktree project directories under their main repo.
+ *
+ * Claude Code stores sessions by absolute path, so worktrees like
+ *   /Users/tom/myapp/.worktrees/feat-auth
+ * get their own directory:
+ *   -Users-tom-myapp--worktrees-feat-auth
+ *
+ * This function groups those under the canonical repo path so they
+ * appear as a single project in the scan output.
+ *
+ * Returns Map<canonicalDir, relatedDirs[]> where canonicalDir is the
+ * main repo's encoded directory name.
+ */
+function clusterWorktreeProjects(
+  projectDirs: string[]
+): Map<string, string[]> {
+  const clusters = new Map<string, string[]>();
 
-  let projectDirs = await discoverProjects();
+  // Worktree pattern: the encoded path contains --worktrees- (which decodes to /.worktrees/)
+  // or --claude-worktrees- (/.claude/worktrees/)
+  const worktreePatterns = [/^(.+?)--worktrees-/, /^(.+?)--claude-worktrees-/];
 
-  // Filter to a single project if --project flag is used
-  if (projectFilter) {
-    const normalizedFilter = projectFilter.replace(/\//g, "-").replace(/^-/, "");
-    projectDirs = projectDirs.filter((dir) => {
-      // Match by: exact dir name, decoded path contains filter, or project short name
-      const decoded = dir.replace(/-/g, "/").replace(/^\//, "");
-      const shortName = decoded.split("/").pop() || "";
-      return (
-        dir === normalizedFilter ||
-        dir.includes(normalizedFilter) ||
-        decoded.includes(projectFilter) ||
-        shortName === projectFilter ||
-        shortName.includes(projectFilter)
-      );
-    });
+  for (const dir of projectDirs) {
+    let canonicalDir: string | null = null;
+
+    for (const pattern of worktreePatterns) {
+      const match = dir.match(pattern);
+      if (match) {
+        canonicalDir = match[1];
+        break;
+      }
+    }
+
+    if (canonicalDir) {
+      const existing = clusters.get(canonicalDir) || [];
+      existing.push(dir);
+      clusters.set(canonicalDir, existing);
+    } else {
+      // Not a worktree — it's a standalone project (or the main repo itself)
+      const existing = clusters.get(dir) || [];
+      existing.push(dir);
+      clusters.set(dir, existing);
+    }
   }
-  const projects: ProjectScan[] = [];
-  let totalToolCalls = 0;
-  let totalBashCommands = 0;
-  let totalSessions = 0;
 
-  for (const projectDir of projectDirs) {
-    // Try sessions-index.json first, fall back to direct JSONL discovery
+  return clusters;
+}
+
+async function scanProjectDirs(
+  dirs: string[],
+  canonicalName: string,
+  maxSessionsPerProject: number,
+): Promise<{
+  project: ProjectScan | null;
+  toolCallCount: number;
+  bashCommandCount: number;
+  sessionCount: number;
+}> {
+  const allToolCalls: ToolCall[] = [];
+  const allRawToolUses: RawToolUse[] = [];
+  const allUserMessages: string[] = [];
+  const allParsedUserMessages: UserMessage[] = [];
+  const allBashCommands: string[] = [];
+  const allHandoffs: string[] = [];
+  let projectErrors = 0;
+  let projectTokens = 0;
+  let totalSessionCount = 0;
+  const allIndexSessions: SessionEntry[] = [];
+
+  for (const projectDir of dirs) {
     const indexSessions = await readSessionIndex(projectDir);
-    const projectName = projectDir.replace(/-/g, "/").replace(/^\//, "");
-
-    const allToolCalls: ToolCall[] = [];
-    const allRawToolUses: RawToolUse[] = [];
-    const allUserMessages: string[] = [];
-    const allParsedUserMessages: UserMessage[] = [];
-    const allBashCommands: string[] = [];
-    const allHandoffs: string[] = [];
-    let projectErrors = 0;
-    let projectTokens = 0;
-    let sessionCount = 0;
 
     if (indexSessions.length > 0) {
+      allIndexSessions.push(...indexSessions);
       const sessionsToScan = indexSessions
         .sort(
           (a, b) =>
@@ -365,7 +395,7 @@ export async function scanSessions(
         )
         .slice(0, maxSessionsPerProject);
 
-      sessionCount = indexSessions.length;
+      totalSessionCount += indexSessions.length;
 
       for (const session of sessionsToScan) {
         const sessionPath = join(
@@ -377,7 +407,7 @@ export async function scanSessions(
         const result = await parseJSONLFile(
           sessionPath,
           session.sessionId,
-          projectName
+          canonicalName
         );
         allToolCalls.push(...result.toolCalls);
         allRawToolUses.push(...result.rawToolUses);
@@ -407,13 +437,13 @@ export async function scanSessions(
         .sort((a, b) => b.mtime - a.mtime)
         .slice(0, maxSessionsPerProject);
 
-      sessionCount = jsonlFiles.length;
+      totalSessionCount += jsonlFiles.length;
 
       for (const file of sorted) {
         const result = await parseJSONLFile(
           file.filePath,
           file.sessionId,
-          projectName
+          canonicalName
         );
         allToolCalls.push(...result.toolCalls);
         allRawToolUses.push(...result.rawToolUses);
@@ -425,14 +455,18 @@ export async function scanSessions(
         projectTokens += result.totalTokens;
       }
     }
+  }
 
-    if (allToolCalls.length === 0 && allBashCommands.length === 0 && allHandoffs.length === 0) continue;
+  if (allToolCalls.length === 0 && allBashCommands.length === 0 && allHandoffs.length === 0) {
+    return { project: null, toolCallCount: 0, bashCommandCount: 0, sessionCount: totalSessionCount };
+  }
 
-    projects.push({
-      projectPath: projectName,
-      projectName: projectName.split("/").pop() || projectName,
-      sessionCount,
-      sessions: indexSessions,
+  return {
+    project: {
+      projectPath: canonicalName,
+      projectName: canonicalName.split("/").pop() || canonicalName,
+      sessionCount: totalSessionCount,
+      sessions: allIndexSessions,
       toolCalls: allToolCalls,
       rawToolUses: allRawToolUses,
       userMessages: allUserMessages,
@@ -441,11 +475,57 @@ export async function scanSessions(
       assistantHandoffs: allHandoffs,
       errorCount: projectErrors,
       totalTokens: projectTokens,
-    });
+    },
+    toolCallCount: allToolCalls.length,
+    bashCommandCount: allBashCommands.length,
+    sessionCount: totalSessionCount,
+  };
+}
 
-    totalToolCalls += allToolCalls.length;
-    totalBashCommands += allBashCommands.length;
-    totalSessions += sessionCount;
+export async function scanSessions(
+  maxSessionsPerProject: number = 10,
+  projectFilter?: string
+): Promise<ScanResult> {
+  const startTime = Date.now();
+
+  let projectDirs = await discoverProjects();
+
+  // Filter to a single project if --project flag is used
+  if (projectFilter) {
+    const normalizedFilter = projectFilter.replace(/\//g, "-").replace(/^-/, "");
+    projectDirs = projectDirs.filter((dir) => {
+      // Match by: exact dir name, decoded path contains filter, or project short name
+      const decoded = dir.replace(/-/g, "/").replace(/^\//, "");
+      const shortName = decoded.split("/").pop() || "";
+      return (
+        dir === normalizedFilter ||
+        dir.includes(normalizedFilter) ||
+        decoded.includes(projectFilter) ||
+        shortName === projectFilter ||
+        shortName.includes(projectFilter)
+      );
+    });
+  }
+
+  // Cluster worktree directories under their main repo
+  const clusters = clusterWorktreeProjects(projectDirs);
+
+  const projects: ProjectScan[] = [];
+  let totalToolCalls = 0;
+  let totalBashCommands = 0;
+  let totalSessions = 0;
+
+  for (const [canonicalDir, dirs] of clusters) {
+    const canonicalName = canonicalDir.replace(/-/g, "/").replace(/^\//, "");
+
+    const result = await scanProjectDirs(dirs, canonicalName, maxSessionsPerProject);
+
+    if (result.project) {
+      projects.push(result.project);
+    }
+    totalToolCalls += result.toolCallCount;
+    totalBashCommands += result.bashCommandCount;
+    totalSessions += result.sessionCount;
   }
 
   return {
@@ -455,5 +535,99 @@ export async function scanSessions(
     totalToolCalls,
     totalBashCommands,
     scanDuration: Date.now() - startTime,
+  };
+}
+
+export interface WrappedStats {
+  totalProjects: number;
+  totalSessions: number;
+  totalTokens: number;
+  totalTokensFormatted: string;
+  firstSessionDate: string | null;
+  firstSessionRelative: string | null;
+  mostActiveProject: { name: string; sessions: number } | null;
+  uniqueToolsUsed: number;
+  totalBashCommands: number;
+  busiestVsAverage: string | null;
+}
+
+function formatTokens(tokens: number): string {
+  if (tokens >= 1_000_000_000) return `${(tokens / 1_000_000_000).toFixed(1)}B`;
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}K`;
+  return `${tokens}`;
+}
+
+function relativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const months = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+  if (months < 1) return "this month";
+  if (months === 1) return "1 month ago";
+  if (months < 12) return `${months} months ago`;
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  if (remainingMonths === 0) return years === 1 ? "1 year ago" : `${years} years ago`;
+  return years === 1 ? `1 year, ${remainingMonths}mo ago` : `${years} years, ${remainingMonths}mo ago`;
+}
+
+function formatMonthYear(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+export function computeWrappedStats(scan: ScanResult): WrappedStats {
+  // Total tokens across all projects
+  const totalTokens = scan.projects.reduce((sum, p) => sum + p.totalTokens, 0);
+
+  // Earliest session date across all projects
+  let earliest: string | null = null;
+  for (const project of scan.projects) {
+    for (const session of project.sessions) {
+      if (session.created && (!earliest || session.created < earliest)) {
+        earliest = session.created;
+      }
+    }
+  }
+
+  // Most active project by session count
+  let mostActive: { name: string; sessions: number } | null = null;
+  for (const project of scan.projects) {
+    if (!mostActive || project.sessionCount > mostActive.sessions) {
+      mostActive = { name: project.projectName, sessions: project.sessionCount };
+    }
+  }
+
+  // Unique tools used
+  const toolNames = new Set<string>();
+  for (const project of scan.projects) {
+    for (const tc of project.toolCalls) {
+      toolNames.add(tc.name);
+    }
+  }
+
+  // Busiest vs average
+  let busiestVsAverage: string | null = null;
+  if (scan.projects.length > 1 && mostActive) {
+    const avgSessions = scan.totalSessions / scan.projects.length;
+    if (avgSessions > 0) {
+      const ratio = Math.round(mostActive.sessions / avgSessions);
+      if (ratio >= 2) {
+        busiestVsAverage = `${ratio}x more sessions than your average project`;
+      }
+    }
+  }
+
+  return {
+    totalProjects: scan.totalProjects,
+    totalSessions: scan.totalSessions,
+    totalTokens,
+    totalTokensFormatted: formatTokens(totalTokens),
+    firstSessionDate: earliest ? formatMonthYear(earliest) : null,
+    firstSessionRelative: earliest ? relativeDate(earliest) : null,
+    mostActiveProject: mostActive,
+    uniqueToolsUsed: toolNames.size,
+    totalBashCommands: scan.totalBashCommands,
+    busiestVsAverage,
   };
 }
