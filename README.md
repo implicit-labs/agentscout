@@ -53,7 +53,10 @@ Runs in six phases:
 
 6. **Report.** Generates an HTML report with all findings and recommendations.
 
-Outputs `agentscout-answers-{timestamp}.json`, `agentscout-recs-{timestamp}.json`, and an HTML report.
+Outputs to `~/Downloads/`:
+- `agentscout-answers-{timestamp}.json` — diagnosis data
+- `agentscout-recs-{timestamp}.json` — recommendations data
+- `agentscout-recs-{timestamp}.html` — HTML report (auto-opened)
 
 ## Catalog Updates
 
