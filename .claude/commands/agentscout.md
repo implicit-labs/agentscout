@@ -293,9 +293,9 @@ Use these signals holistically — don't formula your way to a ranking. Put the 
 
 ### Step 4: Build answers
 
-Generate a timestamped filename:
+Generate a timestamped filename in ~/Downloads:
 ```bash
-echo "agentscout-answers-$(date +%Y%m%dT%H%M%S).json"
+echo ~/Downloads/"agentscout-answers-$(date +%Y%m%dT%H%M%S).json"
 ```
 
 Merge the subagent outputs into the answers format. For each project, take the subagent's interventions and select the top findings (by severity) as `fixableInteractions`:
@@ -353,9 +353,9 @@ Merge the subagent outputs into the answers format. For each project, take the s
 
 IMPORTANT: Do NOT write a bare array. The top-level MUST be `{ "answers": [...] }`.
 
-Write the answers file, then pipe it:
+Write the answers file to ~/Downloads, then pipe it:
 ```bash
-cat <timestamped-filename>.json | node dist/cli.js --apply-answers 2>/dev/null
+cat ~/Downloads/<timestamped-filename>.json | node dist/cli.js --apply-answers 2>/dev/null
 ```
 
 ### Step 5: Present diagnosis as an agentic systems debrief
@@ -548,9 +548,9 @@ For each exploration recommendation, provide:
 
 ### Step 3: Build the recommendation output
 
-Write to a timestamped file:
+Write to a timestamped file in ~/Downloads:
 ```bash
-echo "agentscout-recs-$(date +%Y%m%dT%H%M%S).json"
+echo ~/Downloads/"agentscout-recs-$(date +%Y%m%dT%H%M%S).json"
 ```
 
 Format:
@@ -694,10 +694,10 @@ stack against the catalog. Worth exploring once the foundation from Tiers 1-3 is
 
 After presenting the prose playbook, generate a self-contained HTML file using the template at `templates/recommend.html` as a structural and styling reference.
 
-**File name:** same timestamp as the JSON file but with `.html` extension:
+**File name:** same timestamp as the JSON file but with `.html` extension, in ~/Downloads:
 ```bash
-# If JSON was agentscout-recs-20260312T165011.json, HTML is:
-agentscout-recs-20260312T165011.html
+# If JSON was ~/Downloads/agentscout-recs-20260312T165011.json, HTML is:
+~/Downloads/agentscout-recs-20260312T165011.html
 ```
 
 **How to generate:**
@@ -724,10 +724,17 @@ agentscout-recs-20260312T165011.html
 8. Include the closing summary div
 9. Fill in the header meta: date, project count, session count
 
-Write the HTML file alongside the JSON file. Open it for the user:
+Write the HTML file alongside the JSON file in ~/Downloads. Open it for the user:
 ```bash
-open agentscout-recs-TIMESTAMP.html
+open ~/Downloads/agentscout-recs-TIMESTAMP.html
 ```
+
+**Tell the user where the files are saved.** After opening the HTML, print a message like:
+
+> Your AgentScout report and data files have been saved to **~/Downloads/**:
+> - `agentscout-recs-TIMESTAMP.html` (report)
+> - `agentscout-recs-TIMESTAMP.json` (recommendations data)
+> - `agentscout-answers-TIMESTAMP.json` (diagnosis data)
 
 ---
 
